@@ -26,3 +26,16 @@ export async function isOwnerScoped(userId: string, role: Role): Promise<boolean
 export function toNum(v: unknown): number {
   return v === null || v === undefined ? 0 : Number(v);
 }
+
+/**
+ * Formats a Postgres date/timestamp column as "YYYY-MM-DD". node-postgres
+ * parses `date`/`timestamp[tz]` columns into native JS `Date` objects by
+ * default (NOT strings) -- using `.toISOString()` (UTC) rather than
+ * re-slicing a string keeps this correct regardless of which driver
+ * behavior a given column ends up with.
+ */
+export function toDateStr(v: unknown): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === "string") return v.slice(0, 10);
+  return "";
+}

@@ -8,7 +8,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { currentUserFromAccessToken } from "@/lib/auth-server";
 import { ACCESS_COOKIE, readCookie } from "@/lib/cookies.server";
 import { queryOne } from "@/lib/db.server";
-import { readUpload } from "@/lib/upload.functions";
+import { readUpload } from "@/lib/upload.server";
 import { isOwnerScoped } from "@/lib/queries/_shared.server";
 import type { Role } from "@/lib/permissions";
 

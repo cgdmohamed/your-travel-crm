@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth-middleware";
 import { query, queryOne } from "@/lib/db.server";
-import { ATTACHMENT_UPLOAD_OPTS, deleteUpload, writeUpload } from "@/lib/upload.functions";
+import { toDateStr } from "@/lib/queries/_shared.server";
 import type { Attachment } from "@/lib/crm-data";
 
 type AttachmentRow = {
@@ -14,7 +14,7 @@ type AttachmentRow = {
   mime: string;
   size: number;
   storage_path: string;
-  uploaded_at: string;
+  uploaded_at: string | Date;
   uploaded_by_name: string | null;
 };
 
@@ -28,7 +28,7 @@ function toAttachment(r: AttachmentRow): Attachment {
     mime: r.mime,
     size: r.size,
     url: `/api/attachments/${r.id}/file`,
-    uploadedAt: typeof r.uploaded_at === "string" ? r.uploaded_at.slice(0, 10) : r.uploaded_at,
+    uploadedAt: toDateStr(r.uploaded_at),
     uploadedBy: r.uploaded_by_name ?? "—",
   };
 }
@@ -60,6 +60,7 @@ export const createAttachment = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((data: unknown) => attachmentInput.parse(data))
   .handler(async ({ data, context }): Promise<Attachment> => {
+    const { writeUpload, ATTACHMENT_UPLOAD_OPTS } = await import("@/lib/upload.server");
     const { relativePath, mime, size } = await writeUpload(
       "attachments",
       data.dataUrl,
@@ -88,6 +89,9 @@ export const removeAttachment = createServerFn({ method: "POST" })
       `delete from attachments where id = $1 returning storage_path`,
       [data.id],
     );
-    if (row) await deleteUpload(row.storage_path);
+    if (row) {
+      const { deleteUpload } = await import("@/lib/upload.server");
+      await deleteUpload(row.storage_path);
+    }
     return { ok: true };
   });

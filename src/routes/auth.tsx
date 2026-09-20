@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Plane, LogIn, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { login } from "@/lib/auth";
+import { useCrm } from "@/lib/crm-data";
 import { needsBootstrap, bootstrapAdmin } from "@/lib/bootstrap.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { refreshAuth } = useCrm();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -72,6 +74,12 @@ function AuthPage() {
       return;
     }
     toast.success("مرحباً بك");
+    // CrmProvider (mounted once at the app root) caches the auth session in
+    // its own useAuth() call, which client-side navigation alone would not
+    // refresh -- without this, the dashboard would render with a stale
+    // "logged out" session (falling back to a guest employee) right after
+    // this exact login until a full page reload.
+    await refreshAuth();
     void navigate({ to: "/", replace: true });
   };
 

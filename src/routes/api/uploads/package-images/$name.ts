@@ -3,7 +3,7 @@
 // headers are safe because filenames are content-addressed uuids that never
 // get reused for different bytes (see src/lib/upload.functions.ts).
 import { createFileRoute } from "@tanstack/react-router";
-import { readUpload } from "@/lib/upload.functions";
+import { readUpload } from "@/lib/upload.server";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",

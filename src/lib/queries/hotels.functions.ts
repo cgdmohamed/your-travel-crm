@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth-middleware";
 import { query, queryOne } from "@/lib/db.server";
-import { toNum } from "@/lib/queries/_shared.server";
+import { toDateStr, toNum } from "@/lib/queries/_shared.server";
 import type { HotelStay } from "@/lib/crm-data";
 
 type HotelRow = {
@@ -13,8 +13,8 @@ type HotelRow = {
   city: string | null;
   room_basis: HotelStay["roomBasis"];
   board: HotelStay["board"];
-  check_in: string | null;
-  check_out: string | null;
+  check_in: string | Date | null;
+  check_out: string | Date | null;
   rooms: number;
   guests: number;
   confirmation_no: string | null;
@@ -30,8 +30,8 @@ function toHotel(r: HotelRow): HotelStay {
     city: r.city ?? "",
     roomBasis: r.room_basis,
     board: r.board,
-    checkIn: r.check_in ? r.check_in.slice(0, 10) : "",
-    checkOut: r.check_out ? r.check_out.slice(0, 10) : "",
+    checkIn: r.check_in ? toDateStr(r.check_in) : "",
+    checkOut: r.check_out ? toDateStr(r.check_out) : "",
     rooms: r.rooms,
     guests: r.guests,
     confirmationNo: r.confirmation_no ?? "",

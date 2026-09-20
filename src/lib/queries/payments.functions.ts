@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth-middleware";
 import { query, queryOne, withTransaction } from "@/lib/db.server";
-import { toNum } from "@/lib/queries/_shared.server";
+import { toDateStr, toNum } from "@/lib/queries/_shared.server";
 import { trackMeta } from "@/lib/meta-track";
 import type { Payment } from "@/lib/crm-data";
 
@@ -10,7 +10,7 @@ type PaymentRow = {
   id: string;
   booking_id: string;
   customer_id: string;
-  paid_on: string;
+  paid_on: string | Date;
   amount: string | number;
   method: Payment["method"];
   reference: string | null;
@@ -23,7 +23,7 @@ function toPayment(r: PaymentRow): Payment {
     id: r.id,
     bookingId: r.booking_id,
     customerId: r.customer_id,
-    date: typeof r.paid_on === "string" ? r.paid_on.slice(0, 10) : r.paid_on,
+    date: toDateStr(r.paid_on),
     amount: toNum(r.amount),
     method: r.method,
     reference: r.reference ?? "",

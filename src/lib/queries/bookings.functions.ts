@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth-middleware";
 import { query, queryOne, withTransaction } from "@/lib/db.server";
-import { isOwnerScoped, toNum } from "@/lib/queries/_shared.server";
+import { isOwnerScoped, toDateStr, toNum } from "@/lib/queries/_shared.server";
 import type { Booking } from "@/lib/crm-data";
 import type { Role } from "@/lib/permissions";
 
@@ -11,13 +11,13 @@ type BookingRow = {
   ref: string;
   customer_id: string;
   package_id: string;
-  travel_date: string;
+  travel_date: string | Date;
   pax: number;
   amount: string | number;
   paid: string | number;
   status: Booking["status"];
   owner_id: string | null;
-  created_at: string;
+  created_at: string | Date;
   booking_time: string | null;
 };
 
@@ -27,13 +27,13 @@ function toBooking(r: BookingRow): Booking {
     ref: r.ref,
     customerId: r.customer_id,
     packageId: r.package_id,
-    travelDate: typeof r.travel_date === "string" ? r.travel_date.slice(0, 10) : r.travel_date,
+    travelDate: toDateStr(r.travel_date),
     pax: r.pax,
     amount: toNum(r.amount),
     paid: toNum(r.paid),
     status: r.status,
     ownerId: r.owner_id ?? "",
-    createdAt: typeof r.created_at === "string" ? r.created_at.slice(0, 10) : r.created_at,
+    createdAt: toDateStr(r.created_at),
     time: r.booking_time ?? undefined,
   };
 }

@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth-middleware";
 import { query, queryOne } from "@/lib/db.server";
-import { toNum } from "@/lib/queries/_shared.server";
+import { toDateStr, toNum } from "@/lib/queries/_shared.server";
 import type { Ticket } from "@/lib/crm-data";
 
 type TicketRow = {
@@ -13,8 +13,8 @@ type TicketRow = {
   airline: string;
   flight_no: string | null;
   route: string | null;
-  depart_date: string | null;
-  return_date: string | null;
+  depart_date: string | Date | null;
+  return_date: string | Date | null;
   pnr: string | null;
   cabin: Ticket["cabin"];
   price: string | number;
@@ -30,8 +30,8 @@ function toTicket(r: TicketRow): Ticket {
     airline: r.airline,
     flightNo: r.flight_no ?? "",
     route: r.route ?? "",
-    departDate: r.depart_date ? r.depart_date.slice(0, 10) : "",
-    returnDate: r.return_date ? r.return_date.slice(0, 10) : undefined,
+    departDate: r.depart_date ? toDateStr(r.depart_date) : "",
+    returnDate: r.return_date ? toDateStr(r.return_date) : undefined,
     pnr: r.pnr ?? "",
     cabin: r.cabin,
     price: toNum(r.price),

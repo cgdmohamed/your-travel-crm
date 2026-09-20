@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth-middleware";
 import { query, queryOne } from "@/lib/db.server";
-import { isOwnerScoped, toNum } from "@/lib/queries/_shared.server";
+import { isOwnerScoped, toDateStr, toNum } from "@/lib/queries/_shared.server";
 import type { Opportunity } from "@/lib/crm-data";
 import type { Role } from "@/lib/permissions";
 
@@ -14,7 +14,7 @@ type OpportunityRow = {
   value: string | number;
   stage: Opportunity["stage"];
   owner_id: string | null;
-  follow_up_date: string | null;
+  follow_up_date: string | Date | null;
   source: Opportunity["source"];
   pax: number | null;
   booking_id: string | null;
@@ -30,7 +30,7 @@ function toOpportunity(r: OpportunityRow): Opportunity {
     value: toNum(r.value),
     stage: r.stage,
     ownerId: r.owner_id ?? "",
-    followUpDate: r.follow_up_date ? r.follow_up_date.slice(0, 10) : "",
+    followUpDate: r.follow_up_date ? toDateStr(r.follow_up_date) : "",
     source: r.source,
     pax: r.pax ?? undefined,
     bookingId: r.booking_id ?? undefined,

@@ -34,3 +34,6 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Local file storage (Phase 2) — never committed, mounted as a Docker volume
+data/uploads/
