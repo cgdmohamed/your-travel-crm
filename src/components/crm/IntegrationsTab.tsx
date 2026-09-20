@@ -14,6 +14,7 @@ import {
   saveIntegration,
   disconnectIntegration,
   testIntegration,
+  sendTestEmail,
   type IntegrationsStatus,
 } from "@/lib/integrations.functions";
 
@@ -62,6 +63,8 @@ export function IntegrationsTab({
   const saveFn = useServerFn(saveIntegration);
   const disconnectFn = useServerFn(disconnectIntegration);
   const testFn = useServerFn(testIntegration);
+  const testEmailFn = useServerFn(sendTestEmail);
+  const [testEmailTo, setTestEmailTo] = useState("");
 
   const [status, setStatus] = useState<IntegrationsStatus | null>(null);
   const [busy, setBusy] = useState<string>("");
@@ -70,8 +73,9 @@ export function IntegrationsTab({
   const [metaPixel, setMetaPixel] = useState("");
   const [metaToken, setMetaToken] = useState("");
   const [metaTest, setMetaTest] = useState("");
-  const [waKey, setWaKey] = useState("");
-  const [waPhone, setWaPhone] = useState("");
+  const [waPhoneNumberId, setWaPhoneNumberId] = useState("");
+  const [waAccessToken, setWaAccessToken] = useState("");
+  const [waAppSecret, setWaAppSecret] = useState("");
   const [wpUrl, setWpUrl] = useState("");
   const [wpUser, setWpUser] = useState("");
   const [wpPass, setWpPass] = useState("");
@@ -88,7 +92,7 @@ export function IntegrationsTab({
     setStatus(s);
     setMetaPixel(s.meta.pixelId);
     setMetaTest(s.meta.testEventCode);
-    setWaPhone(s.whatsapp.phoneNumber);
+    setWaPhoneNumberId(s.whatsapp.phoneNumberId);
     setWpUrl(s.wordpress.siteUrl);
     setWpUser(s.wordpress.username);
     setSmtpHost(s.smtp.host);
@@ -98,7 +102,8 @@ export function IntegrationsTab({
     setSmtpName(s.smtp.fromName);
     setSmtpSecure(s.smtp.secure);
     setMetaToken("");
-    setWaKey("");
+    setWaAccessToken("");
+    setWaAppSecret("");
     setWpPass("");
     setSmtpPass("");
   }, [statusFn]);
@@ -164,39 +169,55 @@ export function IntegrationsTab({
           <Status ok={Boolean(status?.whatsapp.connected)} />
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
+          <Row label="معرّف رقم الهاتف (Phone Number ID)" hint="من WhatsApp Business API في Meta for Developers">
+            <Input
+              dir="ltr"
+              className="text-right"
+              value={waPhoneNumberId}
+              onChange={(e) => setWaPhoneNumberId(e.target.value)}
+              placeholder="1029384756"
+            />
+          </Row>
           <Row
-            label="مفتاح واتساب بيزنس (API Key)"
+            label="رمز الوصول (Access Token)"
             hint={
-              status?.whatsapp.keyMask
-                ? `المحفوظ حالياً: ${status.whatsapp.keyMask}`
-                : "من حساب واتساب بيزنس في Meta"
+              status?.whatsapp.tokenMask
+                ? `المحفوظ حالياً: ${status.whatsapp.tokenMask}`
+                : "رمز وصول دائم لتطبيق واتساب بيزنس"
             }
           >
             <Input
               type="password"
-              value={waKey}
-              onChange={(e) => setWaKey(e.target.value)}
-              placeholder="أدخل المفتاح"
+              value={waAccessToken}
+              onChange={(e) => setWaAccessToken(e.target.value)}
+              placeholder="أدخل الرمز"
             />
           </Row>
-          <Row label="رقم واتساب الشركة">
+          <Row label="سر التطبيق (App Secret)" hint="يُستخدم للتحقق من توقيع الـwebhook القادم من Meta">
             <Input
-              value={waPhone}
-              onChange={(e) => setWaPhone(e.target.value)}
-              placeholder="01012345678"
+              type="password"
+              value={waAppSecret}
+              onChange={(e) => setWaAppSecret(e.target.value)}
+              placeholder="أدخل السر"
             />
           </Row>
           <div className="flex items-center justify-between rounded-md border bg-background p-3 md:col-span-2">
             <div>
               <p className="text-sm font-semibold">الفلترة الذكية للمحادثات</p>
-              <p className="text-xs text-muted-foreground">تصنيف تلقائي: مهتم بالحجز أم استفسار</p>
+              <p className="text-xs text-muted-foreground">تصنيف تلقائي عبر OpenAI: مهتم بالحجز أم استفسار</p>
             </div>
             <Switch checked={autoClassify} onCheckedChange={onAutoClassify} />
           </div>
           <div className="flex flex-wrap gap-2 md:col-span-2">
             <Button
               disabled={busy === "whatsapp"}
-              onClick={() => void save("whatsapp", { apiKey: waKey, phoneNumber: waPhone })}
+              onClick={() =>
+                void save("whatsapp", {
+                  phoneNumberId: waPhoneNumberId,
+                  accessToken: waAccessToken,
+                  appSecret: waAppSecret,
+                })
+              }
             >
               <Save className="size-4" /> حفظ وربط
             </Button>
@@ -405,10 +426,36 @@ export function IntegrationsTab({
             </div>
             <Switch checked={smtpSecure} onCheckedChange={setSmtpSecure} />
           </div>
-          <p className="rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-foreground md:col-span-2">
-            رسائل استعادة كلمة المرور وتأكيد الحساب تُرسَل حالياً من بريد المنصة الجاهز. بعد حفظ
-            بيانات خادم البريد هنا، تُستخدم في رسائل النظام (تنبيهات الحجوزات والمتابعات).
-          </p>
+          <Row label="إرسال بريد تجريبي" hint="للتأكد من عمل الإرسال الفعلي بعد الحفظ">
+            <div className="flex gap-2">
+              <Input
+                type="email"
+                dir="ltr"
+                className="text-right"
+                value={testEmailTo}
+                onChange={(e) => setTestEmailTo(e.target.value)}
+                placeholder="you@example.com"
+              />
+              <Button
+                variant="outline"
+                disabled={!testEmailTo || busy === "test-email"}
+                onClick={async () => {
+                  setBusy("test-email");
+                  try {
+                    const r = await testEmailFn({ data: { to: testEmailTo } });
+                    if (r.ok) toast.success(r.message);
+                    else toast.error(r.message);
+                  } catch {
+                    toast.error("تعذر إرسال البريد التجريبي");
+                  } finally {
+                    setBusy("");
+                  }
+                }}
+              >
+                إرسال
+              </Button>
+            </div>
+          </Row>
           <div className="flex flex-wrap gap-2 md:col-span-2">
             <Button
               disabled={busy === "smtp"}

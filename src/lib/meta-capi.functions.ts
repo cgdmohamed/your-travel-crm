@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { normalizePhone } from "@/lib/whatsapp.functions";
+import { query } from "@/lib/db.server";
 
 const GRAPH_VERSION = "v21.0";
 
@@ -50,25 +51,29 @@ const eventInput = z.object({
 export const sendMetaEvent = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => eventInput.parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { metaCredentials } = await import("@/lib/integrations.server");
     const { pixelId, token, testCode } = await metaCredentials();
     const eventId = `${data.eventName}-${crypto.randomUUID()}`;
 
     const log = async (status: string, error?: string, received?: number) => {
-      await supabaseAdmin.from("meta_capi_events").insert({
-        event_name: data.eventName,
-        event_id: eventId,
-        customer_id: data.customerId ?? null,
-        customer_name: data.customerName ?? null,
-        value: data.value ?? null,
-        currency: data.currency,
-        status,
-        error: error ?? null,
-        events_received: received ?? null,
-        sent_by: data.sentBy ?? null,
-        test_event: Boolean(data.test),
-      });
+      await query(
+        `insert into meta_capi_events
+           (event_name, event_id, customer_id, customer_name, value, currency, status, error, events_received, sent_by, test_event)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          data.eventName,
+          eventId,
+          data.customerId ?? null,
+          data.customerName ?? null,
+          data.value ?? null,
+          data.currency,
+          status,
+          error ?? null,
+          received ?? null,
+          data.sentBy ?? null,
+          Boolean(data.test),
+        ],
+      );
     };
 
     if (!pixelId || !token) {
@@ -131,11 +136,8 @@ export const sendMetaEvent = createServerFn({ method: "POST" })
 
 /** آخر أحداث أُرسلت إلى Meta */
 export const listMetaEvents = createServerFn({ method: "GET" }).handler(async () => {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin
-    .from("meta_capi_events")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(50);
+  const { rows: data } = await query(
+    `select * from meta_capi_events order by created_at desc limit 50`,
+  );
   return (data ?? []) as MetaEventRow[];
 });

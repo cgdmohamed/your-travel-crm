@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { logout } from "@/lib/auth";
 import {
   Activity,
   MessageCircle,
@@ -128,7 +128,7 @@ export function AppLayout({
               title="تسجيل الخروج"
               onClick={() => {
                 void (async () => {
-                  await supabase.auth.signOut();
+                  await logout();
                   toast.success("تم تسجيل الخروج");
                   void navigate({ to: "/auth", replace: true });
                 })();

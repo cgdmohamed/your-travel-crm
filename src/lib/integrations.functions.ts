@@ -5,7 +5,7 @@ const mask = (v?: string) => (v ? `••••${v.slice(-4)}` : "");
 
 export type IntegrationsStatus = {
   meta: { connected: boolean; pixelId: string; tokenMask: string; testEventCode: string };
-  whatsapp: { connected: boolean; keyMask: string; phoneNumber: string; gatewayReady: boolean };
+  whatsapp: { connected: boolean; phoneNumberId: string; tokenMask: string };
   wordpress: { connected: boolean; siteUrl: string; username: string; passwordMask: string };
   smtp: {
     connected: boolean;
@@ -39,10 +39,9 @@ export const getIntegrationsStatus = createServerFn({ method: "GET" }).handler(
         testEventCode: meta.testCode ?? "",
       },
       whatsapp: {
-        connected: Boolean(wa.apiKey && wa.lovableKey),
-        keyMask: mask(wa.apiKey),
-        phoneNumber: wa.phoneNumber ?? "",
-        gatewayReady: Boolean(wa.lovableKey),
+        connected: Boolean(wa.phoneNumberId && wa.accessToken),
+        phoneNumberId: wa.phoneNumberId ?? "",
+        tokenMask: mask(wa.accessToken),
       },
       wordpress: {
         connected: Boolean(wp.siteUrl && wp.username && wp.appPassword),
@@ -85,9 +84,21 @@ export const disconnectIntegration = createServerFn({ method: "POST" })
     z.object({ key: z.enum(["meta", "whatsapp", "wordpress", "smtp"]) }).parse(data),
   )
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin.from("integration_config").delete().eq("key", data.key);
+    const { query } = await import("@/lib/db.server");
+    await query(`delete from integration_config where key = $1`, [data.key]);
     return { ok: true as const };
+  });
+
+/** إرسال إيميل تجريبي حقيقي عبر SMTP المحفوظ */
+export const sendTestEmail = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => z.object({ to: z.string().email() }).parse(data))
+  .handler(async ({ data }) => {
+    const { sendEmail } = await import("@/lib/smtp.server");
+    return sendEmail({
+      to: data.to,
+      subject: "بريد تجريبي — نظام إدارة العملاء",
+      html: "<p>هذه رسالة تجريبية للتأكد من عمل إعدادات البريد الصادر (SMTP) بنجاح.</p>",
+    });
   });
 
 /** اختبار الاتصال الفعلي بكل تكامل */
@@ -104,7 +115,6 @@ export const testIntegration = createServerFn({ method: "POST" })
       const { testSmtpConnection } = await import("@/lib/smtp.server");
       return testSmtpConnection();
     }
-
 
     if (data.key === "meta") {
       const { pixelId, token } = await metaCredentials();
@@ -126,16 +136,22 @@ export const testIntegration = createServerFn({ method: "POST" })
     }
 
     if (data.key === "whatsapp") {
-      const { apiKey, lovableKey } = await whatsappCredentials();
-      if (!apiKey) return { ok: false, message: "أدخل مفتاح واتساب بيزنس أولاً" };
-      if (!lovableKey) return { ok: false, message: "بوابة الاتصال غير جاهزة على الخادم" };
+      // اختبار مباشر مع Meta WhatsApp Cloud API — بدون أي وسيط
+      const { phoneNumberId, accessToken } = await whatsappCredentials();
+      if (!phoneNumberId || !accessToken) {
+        return { ok: false, message: "أدخل معرّف رقم الهاتف ورمز الوصول من Meta أولاً" };
+      }
       try {
-        const res = await fetch("https://connector-gateway.lovable.dev/whatsapp/health", {
-          headers: { Authorization: `Bearer ${lovableKey}`, "X-Connection-Api-Key": apiKey },
-        });
+        const res = await fetch(
+          `https://graph.facebook.com/v21.0/${phoneNumberId}?access_token=${encodeURIComponent(accessToken)}`,
+        );
+        const body = (await res.json().catch(() => ({}))) as {
+          display_phone_number?: string;
+          error?: { message?: string };
+        };
         return res.ok
-          ? { ok: true, message: "حساب واتساب بيزنس متصل" }
-          : { ok: false, message: `فشل الاتصال (${res.status})` };
+          ? { ok: true, message: `حساب واتساب متصل: ${body.display_phone_number ?? phoneNumberId}` }
+          : { ok: false, message: body.error?.message ?? `فشل الاتصال (${res.status})` };
       } catch (err) {
         return { ok: false, message: err instanceof Error ? err.message : "تعذر الاتصال" };
       }
@@ -149,7 +165,8 @@ export const testIntegration = createServerFn({ method: "POST" })
       const base = wp.siteUrl.replace(/\/+$/, "");
       const headers: Record<string, string> = {};
       if (wp.username && wp.appPassword) {
-        headers["Authorization"] = `Basic ${btoa(`${wp.username}:${wp.appPassword}`)}`;
+        headers["Authorization"] =
+          `Basic ${Buffer.from(`${wp.username}:${wp.appPassword}`).toString("base64")}`;
       }
       const res = await fetch(`${base}/wp-json/wp/v2/types`, { headers });
       return res.ok

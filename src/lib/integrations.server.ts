@@ -1,4 +1,4 @@
-/** قراءة إعدادات التكاملات المحفوظة في قاعدة البيانات (خادم فقط) */
+/** قراءة إعدادات التكاملات المحفوظة في قاعدة البيانات (خادم فقط) — PostgreSQL عادي */
 export type IntegrationKey = "meta" | "whatsapp" | "wordpress" | "smtp";
 
 export type SmtpConfig = {
@@ -12,19 +12,19 @@ export type SmtpConfig = {
 };
 
 export type MetaConfig = { pixelId?: string; accessToken?: string; testEventCode?: string };
-export type WhatsAppConfig = { apiKey?: string; phoneNumber?: string };
+/** واتساب بيزنس عبر Meta WhatsApp Cloud API الرسمية مباشرة (بدون أي وسيط) */
+export type WhatsAppConfig = { phoneNumberId?: string; accessToken?: string; appSecret?: string };
 export type WordpressConfig = { siteUrl?: string; username?: string; appPassword?: string };
 
 export async function readConfig<T extends Record<string, unknown>>(
   key: IntegrationKey,
 ): Promise<T> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin
-    .from("integration_config")
-    .select("config")
-    .eq("key", key)
-    .maybeSingle();
-  return ((data?.config as T) ?? ({} as T)) as T;
+  const { queryOne } = await import("@/lib/db.server");
+  const row = await queryOne<{ config: T }>(
+    `select config from integration_config where key = $1`,
+    [key],
+  );
+  return row?.config ?? ({} as T);
 }
 
 export async function writeConfig(
@@ -32,7 +32,7 @@ export async function writeConfig(
   patch: Record<string, unknown>,
   updatedBy?: string,
 ): Promise<void> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { query } = await import("@/lib/db.server");
   const current = await readConfig(key);
   const next: Record<string, unknown> = { ...current };
   for (const [k, v] of Object.entries(patch)) {
@@ -40,12 +40,12 @@ export async function writeConfig(
     if (v === "") delete next[k];
     else next[k] = v;
   }
-  await supabaseAdmin.from("integration_config").upsert({
-    key,
-    config: next as never,
-    updated_by: updatedBy ?? null,
-    updated_at: new Date().toISOString(),
-  });
+  await query(
+    `insert into integration_config (key, config, updated_by, updated_at)
+     values ($1, $2::jsonb, $3, now())
+     on conflict (key) do update set config = $2::jsonb, updated_by = $3, updated_at = now()`,
+    [key, JSON.stringify(next), updatedBy ?? null],
+  );
 }
 
 /** القيمة المحفوظة أولاً ثم متغيّر البيئة */
@@ -61,11 +61,12 @@ export async function metaCredentials() {
   };
 }
 
+/** بيانات اتصال WhatsApp Cloud API الرسمية (Meta مباشرة) */
 export async function whatsappCredentials() {
   const cfg = await readConfig<WhatsAppConfig>("whatsapp");
   return {
-    apiKey: pick(cfg.apiKey, process.env["WHATSAPP_API_KEY"]),
-    lovableKey: process.env["LOVABLE_API_KEY"],
-    phoneNumber: cfg.phoneNumber,
+    phoneNumberId: pick(cfg.phoneNumberId, process.env["WHATSAPP_PHONE_NUMBER_ID"]),
+    accessToken: pick(cfg.accessToken, process.env["WHATSAPP_ACCESS_TOKEN"]),
+    appSecret: pick(cfg.appSecret, process.env["WHATSAPP_APP_SECRET"]),
   };
 }

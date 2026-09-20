@@ -101,7 +101,7 @@ function toForm(p: TourPackage): FormState {
     category: p.category,
     roomBasis: p.roomBasis,
     status: p.status,
-    image: p.image,
+    image: p.image ?? "",
     gallery: p.gallery ?? [],
     includes: p.includes.join("\n"),
     excludes: p.excludes.join("\n"),

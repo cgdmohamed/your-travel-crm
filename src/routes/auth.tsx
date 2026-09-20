@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Plane, LogIn, KeyRound, ArrowRight, Loader2 } from "lucide-react";
+import { Plane, LogIn, Loader2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { supabase } from "@/integrations/supabase/client";
+import { login } from "@/lib/auth";
 import { needsBootstrap, bootstrapAdmin } from "@/lib/bootstrap.functions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,24 +33,19 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
   const [bootstrap, setBootstrap] = useState(false);
   const statusFn = useServerFn(needsBootstrap);
   const bootstrapFn = useServerFn(bootstrapAdmin);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) void navigate({ to: "/", replace: true });
-    });
     void statusFn({})
       .then((r) => setBootstrap(r.needed))
       .catch(() => setBootstrap(false));
-  }, [navigate, statusFn]);
+  }, [statusFn]);
 
   const createFirstAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,38 +62,17 @@ function AuthPage() {
     setBootstrap(false);
   };
 
-  const login = async (e: React.FormEvent) => {
+  const doLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const r = await login(email.trim(), password);
     setBusy(false);
-    if (error) {
-      toast.error(
-        error.message.includes("Invalid login")
-          ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
-          : error.message.includes("Email not confirmed")
-            ? "لم يتم تأكيد البريد بعد — راجع رسالة التفعيل"
-            : "تعذر تسجيل الدخول",
-      );
+    if (!r.ok) {
+      toast.error(r.message ?? "تعذر تسجيل الدخول");
       return;
     }
     toast.success("مرحباً بك");
     void navigate({ to: "/", replace: true });
-  };
-
-  const forgot = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setBusy(false);
-    if (error) {
-      toast.error("تعذر إرسال رسالة الاستعادة");
-      return;
-    }
-    setSent(true);
-    toast.success("أرسلنا رابط استعادة كلمة المرور إلى بريدك");
   };
 
   return (
@@ -159,15 +133,12 @@ function AuthPage() {
             </CardContent>
           </Card>
         ) : (
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base">
-              {mode === "login" ? "تسجيل الدخول" : "استعادة كلمة المرور"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {mode === "login" ? (
-              <form className="space-y-4" onSubmit={login}>
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-base">تسجيل الدخول</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form className="space-y-4" onSubmit={doLogin}>
                 <div className="space-y-1.5">
                   <Label className="text-sm font-semibold">البريد الإلكتروني</Label>
                   <Input
@@ -193,66 +164,14 @@ function AuthPage() {
                   {busy ? <Loader2 className="size-4 animate-spin" /> : <LogIn className="size-4" />}
                   دخول
                 </Button>
-                <button
-                  type="button"
-                  className="w-full text-center text-sm font-semibold text-primary hover:underline"
-                  onClick={() => {
-                    setMode("forgot");
-                    setSent(false);
-                  }}
-                >
-                  نسيت كلمة المرور؟
-                </button>
               </form>
-            ) : sent ? (
-              <div className="space-y-4 text-center">
-                <p className="text-sm text-foreground">
-                  أرسلنا رابط إعادة تعيين كلمة المرور إلى <span dir="ltr">{email}</span>. افتح
-                  الرابط من بريدك لإكمال العملية.
-                </p>
-                <Button variant="outline" className="w-full" onClick={() => setMode("login")}>
-                  <ArrowRight className="size-4" /> العودة لتسجيل الدخول
-                </Button>
-              </div>
-            ) : (
-              <form className="space-y-4" onSubmit={forgot}>
-                <p className="text-sm text-muted-foreground">
-                  أدخل بريدك المسجّل وسنرسل لك رابطاً لتعيين كلمة مرور جديدة.
-                </p>
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-semibold">البريد الإلكتروني</Label>
-                  <Input
-                    type="email"
-                    required
-                    dir="ltr"
-                    className="text-right"
-                    value={email}
-                    onChange={(ev) => setEmail(ev.target.value)}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={busy}>
-                  {busy ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <KeyRound className="size-4" />
-                  )}
-                  إرسال رابط الاستعادة
-                </Button>
-                <button
-                  type="button"
-                  className="w-full text-center text-sm font-semibold text-primary hover:underline"
-                  onClick={() => setMode("login")}
-                >
-                  العودة لتسجيل الدخول
-                </button>
-              </form>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
         )}
 
         <p className="text-center text-xs text-muted-foreground">
-          الحسابات يُنشئها مدير الشركة من صفحة الإعدادات ← المستخدمون.
+          الحسابات يُنشئها مدير الشركة من صفحة الإعدادات ← المستخدمون. لنسيان كلمة المرور، راجع
+          مدير الشركة لإعادة تعيينها.
         </p>
       </div>
     </div>

@@ -11,7 +11,6 @@ import { DirectionProvider } from "@radix-ui/react-direction";
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CrmProvider } from "@/lib/crm-data";
 import { SettingsProvider } from "@/lib/settings";
 import { Toaster } from "@/components/ui/sonner";
@@ -42,7 +41,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
   useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    // Errors are logged locally only (console.error above) — no external
+    // error-reporting service. Wire this to a self-hosted log file/service
+    // if this deployment needs it.
   }, [error]);
 
   return (

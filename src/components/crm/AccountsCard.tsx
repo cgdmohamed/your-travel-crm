@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2, RefreshCw, Trash2, UserPlus } from "lucide-react";
+import { KeyRound, Loader2, RefreshCw, Trash2, UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,7 @@ import {
   createAccount,
   deleteAccount,
   setAccountRole,
+  resetAccountPassword,
   type AccountRow,
 } from "@/lib/accounts.functions";
 
@@ -42,6 +43,7 @@ export function AccountsCard() {
   const createFn = useServerFn(createAccount);
   const deleteFn = useServerFn(deleteAccount);
   const roleFn = useServerFn(setAccountRole);
+  const resetPasswordFn = useServerFn(resetAccountPassword);
 
   const [rows, setRows] = useState<AccountRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -196,7 +198,7 @@ export function AccountsCard() {
                     {r.email}
                   </p>
                 </div>
-                {!r.confirmed ? <Badge variant="outline">بانتظار التأكيد</Badge> : null}
+                {!r.active ? <Badge variant="outline">معطّل</Badge> : null}
                 <Select
                   value={r.role}
                   onValueChange={(v) => {
@@ -228,7 +230,24 @@ export function AccountsCard() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  title="حذف الحساب"
+                  title="إعادة تعيين كلمة المرور"
+                  onClick={() => {
+                    const newPassword = window.prompt("كلمة المرور الجديدة (8 أحرف على الأقل)");
+                    if (!newPassword) return;
+                    void resetPasswordFn({ data: { id: r.id, newPassword } })
+                      .then((res) => {
+                        if (res.ok) toast.success(res.message);
+                        else toast.error(res.message);
+                      })
+                      .catch(() => toast.error("تعذر إعادة تعيين كلمة المرور"));
+                  }}
+                >
+                  <KeyRound className="size-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="تعطيل الحساب"
                   onClick={() => {
                     void deleteFn({ data: { id: r.id } })
                       .then((res) => {
@@ -236,7 +255,7 @@ export function AccountsCard() {
                         else toast.error(res.message);
                         return load();
                       })
-                      .catch(() => toast.error("تعذر حذف الحساب"));
+                      .catch(() => toast.error("تعذر تعطيل الحساب"));
                   }}
                 >
                   <Trash2 className="size-4 text-destructive" />

@@ -8,12 +8,6 @@ import {
   type Context,
   type ReactNode,
 } from "react";
-import pkgUmrah from "@/assets/pkg-umrah.jpg";
-import pkgIstanbul from "@/assets/pkg-istanbul.jpg";
-import pkgMaldives from "@/assets/pkg-maldives.jpg";
-import pkgGeorgia from "@/assets/pkg-georgia.jpg";
-import pkgSharm from "@/assets/pkg-sharm.jpg";
-import pkgParis from "@/assets/pkg-paris.jpg";
 
 /* ---------------- Types ---------------- */
 
@@ -164,7 +158,7 @@ export type TourPackage = {
   status: PackageStatus;
   category: PackageCategory;
   roomBasis: RoomBasis;
-  image: string;
+  image: string | null;
   /** ألبوم صور إضافية للباقة */
   gallery?: string[];
   includes: string[];
@@ -359,7 +353,7 @@ const packages: TourPackage[] = [
     status: "available",
     category: "full",
     roomBasis: "quad",
-    image: pkgUmrah,
+    image: null,
     wpId: 1201,
     wpSlug: "umrah-ramadan-10-nights",
     includes: [
@@ -382,7 +376,7 @@ const packages: TourPackage[] = [
     status: "full",
     category: "full",
     roomBasis: "double",
-    image: pkgIstanbul,
+    image: null,
     wpId: 1202,
     wpSlug: "istanbul-bursa-7-nights",
     includes: [
@@ -405,7 +399,7 @@ const packages: TourPackage[] = [
     status: "available",
     category: "hotel",
     roomBasis: "double",
-    image: pkgMaldives,
+    image: null,
     wpId: 1203,
     wpSlug: "maldives-honeymoon-5-nights",
     includes: [
@@ -427,7 +421,7 @@ const packages: TourPackage[] = [
     status: "available",
     category: "shared",
     roomBasis: "triple",
-    image: pkgGeorgia,
+    image: null,
     wpId: 1204,
     wpSlug: "green-georgia-6-nights",
     includes: [
@@ -449,7 +443,7 @@ const packages: TourPackage[] = [
     status: "ended",
     category: "hotel",
     roomBasis: "double",
-    image: pkgSharm,
+    image: null,
     wpId: 1205,
     wpSlug: "sharm-safari-4-nights",
     includes: [
@@ -471,7 +465,7 @@ const packages: TourPackage[] = [
     status: "available",
     category: "flight",
     roomBasis: "quad",
-    image: pkgParis,
+    image: null,
     wpId: 1206,
     wpSlug: "paris-disney-family-8-nights",
     includes: [
