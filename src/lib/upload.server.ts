@@ -1,7 +1,7 @@
 /**
  * Local file storage — replaces Supabase Storage entirely (Phase 2).
  * Files are written under data/uploads/<category>/<uuid><ext> on disk
- * (mounted as a persistent Docker volume — see docker-compose.yml).
+ * (mounted as a persistent Docker volume — see docker-compose.yaml).
  *
  * Server-only module (touches node:fs). Anything that imports this from a
  * *.functions.ts file MUST do so with a dynamic `await import(...)` inside a

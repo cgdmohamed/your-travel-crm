@@ -8,7 +8,7 @@ anywhere in the schema — isolation is at the infrastructure level.
 ## 1. Provision a dedicated PostgreSQL database
 
 Use a separate `postgres:16` container/volume (via the included
-`docker-compose.yml`) or a managed Postgres resource on Coolify — either
+`docker-compose.yaml`) or a managed Postgres resource on Coolify — either
 way, this database must not be shared with any other client.
 
 ## 2. Run migrations
@@ -19,7 +19,7 @@ Migrations are plain SQL, no Supabase CLI or other tooling required.
 psql "$DATABASE_URL" -f db/migrations/001_init.sql
 ```
 
-With the provided `docker-compose.yml`, this happens automatically on first
+With the provided `docker-compose.yaml`, this happens automatically on first
 boot: Postgres's official image runs every `.sql` file under
 `/docker-entrypoint-initdb.d` (mounted from `db/migrations/`) the first time
 its data volume is empty. If you add a `002_*.sql` file later for an

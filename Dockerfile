@@ -18,7 +18,7 @@ COPY --from=build /app/server-entry.mjs ./server-entry.mjs
 COPY --from=build /app/public ./public
 
 # Local file storage (package images, customer attachments, company logo) —
-# mount this as a volume in docker-compose.yml so uploads survive restarts.
+# mount this as a volume in docker-compose.yaml so uploads survive restarts.
 RUN mkdir -p /app/data/uploads/package-images \
     /app/data/uploads/attachments \
     /app/data/uploads/company-assets
