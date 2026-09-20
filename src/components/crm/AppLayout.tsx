@@ -22,13 +22,6 @@ import { useCrm, ROLE_LABELS, type Permission } from "@/lib/crm-data";
 import { useSettings } from "@/lib/settings";
 import { GlobalSearch } from "@/components/crm/GlobalSearch";
 import { QuickActions } from "@/components/crm/QuickActions";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const NAV: { to: string; label: string; icon: typeof Package; perm: Permission }[] = [
   { to: "/", label: "لوحة المؤشرات", icon: LayoutDashboard, perm: "packages.view" },
@@ -52,7 +45,7 @@ export function AppLayout({
   subtitle?: string;
   children: ReactNode;
 }) {
-  const { can, employees, currentUser, setCurrentUserId } = useCrm();
+  const { can, currentUser, refreshAuth } = useCrm();
   const navigate = useNavigate();
   const { settings } = useSettings();
   // يُحسب التاريخ بعد الترطيب حتى لا يختلف نص الخادم عن المتصفح (فرق التوقيت)
@@ -98,37 +91,21 @@ export function AppLayout({
             <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
               {currentUser.name.slice(0, 1)}
             </span>
-            <Select value={currentUser.id} onValueChange={setCurrentUserId}>
-              <SelectTrigger
-                title="تبديل المستخدم"
-                className="h-auto min-w-0 flex-1 flex-col items-start gap-0 border-0 bg-transparent px-1 py-1 shadow-none focus:ring-0 [&>svg]:size-3.5 [&>svg]:text-sidebar-foreground/70"
-              >
-                <div className="flex w-full min-w-0 flex-col items-start">
-                  <span className="w-full truncate text-right text-sm font-bold text-sidebar-foreground">
-                    {currentUser.name}
-                  </span>
-                  <span className="text-xs text-sidebar-foreground/75">
-                    {ROLE_LABELS[currentUser.role]}
-                  </span>
-                </div>
-
-              </SelectTrigger>
-              <SelectContent>
-                {employees
-                  .filter((e) => e.active)
-                  .map((e) => (
-                    <SelectItem key={e.id} value={e.id}>
-                      {e.name} — {ROLE_LABELS[e.role]}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="w-full truncate text-right text-sm font-bold text-sidebar-foreground">
+                {currentUser.name}
+              </span>
+              <span className="text-xs text-sidebar-foreground/75">
+                {ROLE_LABELS[currentUser.role]}
+              </span>
+            </div>
             <button
               type="button"
               title="تسجيل الخروج"
               onClick={() => {
                 void (async () => {
                   await logout();
+                  await refreshAuth();
                   toast.success("تم تسجيل الخروج");
                   void navigate({ to: "/auth", replace: true });
                 })();

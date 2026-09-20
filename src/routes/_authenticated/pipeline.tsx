@@ -253,11 +253,15 @@ function ConvertDialog({ opp, onClose }: { opp: Opportunity | null; onClose: () 
     setPaid(0);
   }
 
-  const save = () => {
+  const save = async () => {
     if (!opp) return;
-    const ref = convertOpportunityToBooking(opp.id, { travelDate, pax, amount, paid });
-    toast.success(`تم إنشاء الحجز ${ref}`);
-    onClose();
+    try {
+      const ref = await convertOpportunityToBooking(opp.id, { travelDate, pax, amount, paid });
+      toast.success(`تم إنشاء الحجز ${ref}`);
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر تحويل الفرصة إلى حجز");
+    }
   };
 
   const skip = () => {

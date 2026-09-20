@@ -37,6 +37,8 @@ import {
   type TourPackage,
 } from "@/lib/crm-data";
 import { useSettings } from "@/lib/settings";
+import { useServerFn } from "@tanstack/react-start";
+import { uploadPackageImage } from "@/lib/upload.functions";
 
 export const Route = createFileRoute("/_authenticated/packages")({
   head: () => ({
@@ -115,6 +117,7 @@ function slugify(v: string) {
 function PackagesPage() {
   const { packages, addPackage, updatePackage, can } = useCrm();
   const { settings } = useSettings();
+  const uploadFn = useServerFn(uploadPackageImage);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | PackageStatus>("all");
   const [category, setCategory] = useState<"all" | PackageCategory>("all");
@@ -252,6 +255,7 @@ function PackagesPage() {
           if (!o) setEditing(null);
         }}
         onSubmit={submit}
+        uploadFn={uploadFn}
       />
     </AppLayout>
   );
@@ -264,6 +268,7 @@ function PackageFormDialog({
   setForm,
   onOpenChange,
   onSubmit,
+  uploadFn,
 }: {
   open: boolean;
   editing: TourPackage | null;
@@ -271,6 +276,7 @@ function PackageFormDialog({
   setForm: (f: FormState) => void;
   onOpenChange: (o: boolean) => void;
   onSubmit: () => void;
+  uploadFn: (opts: { data: { fileName: string; dataUrl: string } }) => Promise<{ ok: true; url: string }>;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -387,6 +393,7 @@ function PackageFormDialog({
             <Label>صورة الباقة الرئيسية</Label>
             <ImageDrop
               value={form.image}
+              uploadFn={uploadFn}
               onPick={(urls) => setForm({ ...form, image: urls[0] ?? form.image })}
               onRemove={() => setForm({ ...form, image: "" })}
             />
@@ -395,6 +402,7 @@ function PackageFormDialog({
             <Label>ألبوم صور الباقة</Label>
             <GalleryDrop
               images={form.gallery}
+              uploadFn={uploadFn}
               onAdd={(urls) => setForm({ ...form, gallery: [...form.gallery, ...urls] })}
               onRemove={(i) =>
                 setForm({ ...form, gallery: form.gallery.filter((_, idx) => idx !== i) })
@@ -596,22 +604,36 @@ function PackageCard({
 
 /* ---------------- رفع الصور ---------------- */
 
-function readFiles(files: File[], cb: (urls: string[]) => void) {
+type UploadFn = (opts: {
+  data: { fileName: string; dataUrl: string };
+}) => Promise<{ ok: true; url: string }>;
+
+function readAsDataUrl(f: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.readAsDataURL(f);
+  });
+}
+
+/** يقرأ الصور المختارة ويرفعها فعليًا للخادم (Phase 2 — تخزين محلي)، ثم يرجّع روابطها الدائمة */
+function readFiles(files: File[], uploadFn: UploadFn, cb: (urls: string[]) => void) {
   const imgs = files.filter((f) => f.type.startsWith("image/"));
   if (imgs.length === 0) {
     toast.error("من فضلك اختر ملفات صور فقط");
     return;
   }
-  Promise.all(
-    imgs.map(
-      (f) =>
-        new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(String(reader.result));
-          reader.readAsDataURL(f);
-        }),
-    ),
-  ).then(cb);
+  void Promise.all(
+    imgs.map(async (f) => {
+      const dataUrl = await readAsDataUrl(f);
+      const res = await uploadFn({ data: { fileName: f.name, dataUrl } });
+      return res.url;
+    }),
+  )
+    .then(cb)
+    .catch((e: unknown) => {
+      toast.error(e instanceof Error ? e.message : "تعذر رفع الصورة");
+    });
 }
 
 function useDropzone(onFiles: (files: File[]) => void) {
@@ -635,15 +657,17 @@ function useDropzone(onFiles: (files: File[]) => void) {
 
 function ImageDrop({
   value,
+  uploadFn,
   onPick,
   onRemove,
 }: {
   value: string;
+  uploadFn: UploadFn;
   onPick: (urls: string[]) => void;
   onRemove: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const { over, props } = useDropzone((files) => readFiles(files.slice(0, 1), onPick));
+  const { over, props } = useDropzone((files) => readFiles(files.slice(0, 1), uploadFn, onPick));
 
   if (value) {
     return (
@@ -673,7 +697,7 @@ function ImageDrop({
           type="file"
           accept="image/*"
           hidden
-          onChange={(e) => readFiles(Array.from(e.target.files ?? []).slice(0, 1), onPick)}
+          onChange={(e) => readFiles(Array.from(e.target.files ?? []).slice(0, 1), uploadFn, onPick)}
         />
       </div>
     );
@@ -694,7 +718,7 @@ function ImageDrop({
         type="file"
         accept="image/*"
         hidden
-        onChange={(e) => readFiles(Array.from(e.target.files ?? []).slice(0, 1), onPick)}
+        onChange={(e) => readFiles(Array.from(e.target.files ?? []).slice(0, 1), uploadFn, onPick)}
       />
     </div>
   );
@@ -702,17 +726,19 @@ function ImageDrop({
 
 function GalleryDrop({
   images,
+  uploadFn,
   onAdd,
   onRemove,
   onMakeCover,
 }: {
   images: string[];
+  uploadFn: UploadFn;
   onAdd: (urls: string[]) => void;
   onRemove: (i: number) => void;
   onMakeCover: (i: number) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const { over, props } = useDropzone((files) => readFiles(files, onAdd));
+  const { over, props } = useDropzone((files) => readFiles(files, uploadFn, onAdd));
 
   return (
     <div className="space-y-2">
@@ -755,7 +781,7 @@ function GalleryDrop({
           accept="image/*"
           multiple
           hidden
-          onChange={(e) => readFiles(Array.from(e.target.files ?? []), onAdd)}
+          onChange={(e) => readFiles(Array.from(e.target.files ?? []), uploadFn, onAdd)}
         />
       </div>
     </div>

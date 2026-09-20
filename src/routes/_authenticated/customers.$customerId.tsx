@@ -734,13 +734,13 @@ function FileChip({ file, onRemove }: { file: Att; onRemove: (id: string) => voi
   return (
     <div className="group relative flex w-44 items-center gap-2 rounded-lg border bg-card p-2">
       <a
-        href={file.dataUrl}
+        href={file.url}
         target="_blank"
         rel="noreferrer"
         className="flex min-w-0 flex-1 items-center gap-2"
       >
         {isImage ? (
-          <img src={file.dataUrl} alt={file.name} className="size-9 rounded object-cover" />
+          <img src={file.url} alt={file.name} className="size-9 rounded object-cover" />
         ) : (
           <span className="flex size-9 items-center justify-center rounded bg-muted">
             <FileText className="size-4 text-primary" />

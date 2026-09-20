@@ -63,14 +63,14 @@ export function OpportunityDialog({
     setForm((f) => ({ ...f, pax, value: pkg ? pkg.price * pax : f.value }));
   };
 
-  const submit = () => {
+  const submit = async () => {
     let cid = form.customerId;
     if (mode === "new") {
       if (!form.newName.trim() || !form.newPhone.trim()) {
         toast.error("أدخل اسم العميل ورقم الجوال");
         return;
       }
-      cid = addCustomer({
+      cid = await addCustomer({
         name: form.newName.trim(),
         phone: form.newPhone.trim(),
         email: "",
@@ -83,7 +83,7 @@ export function OpportunityDialog({
       toast.error("أكمل بيانات الفرصة");
       return;
     }
-    addOpportunity({
+    await addOpportunity({
       title: form.title.trim(),
       customerId: cid,
       packageId: form.packageId,

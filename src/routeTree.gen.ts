@@ -26,7 +26,9 @@ import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
 import { Route as ApiAuthMeRouteImport } from './routes/api/auth/me'
 import { Route as ApiAuthRefreshRouteImport } from './routes/api/auth/refresh'
+import { Route as ApiAttachmentsIdFileRouteImport } from './routes/api/attachments/$id/file'
 import { Route as ApiPublicWhatsappWebhookRouteImport } from './routes/api/public/whatsapp/webhook'
+import { Route as ApiUploadsPackageImagesNameRouteImport } from './routes/api/uploads/package-images/$name'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -114,10 +116,21 @@ const ApiAuthRefreshRoute = ApiAuthRefreshRouteImport.update({
   path: '/api/auth/refresh',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAttachmentsIdFileRoute = ApiAttachmentsIdFileRouteImport.update({
+  id: '/api/attachments/$id/file',
+  path: '/api/attachments/$id/file',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWhatsappWebhookRoute =
   ApiPublicWhatsappWebhookRouteImport.update({
     id: '/api/public/whatsapp/webhook',
     path: '/api/public/whatsapp/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiUploadsPackageImagesNameRoute =
+  ApiUploadsPackageImagesNameRouteImport.update({
+    id: '/api/uploads/package-images/$name',
+    path: '/api/uploads/package-images/$name',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -138,7 +151,9 @@ export interface FileRoutesByFullPath {
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/refresh': typeof ApiAuthRefreshRoute
   '/customers/': typeof AuthenticatedCustomersIndexRoute
+  '/api/attachments/$id/file': typeof ApiAttachmentsIdFileRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
+  '/api/uploads/package-images/$name': typeof ApiUploadsPackageImagesNameRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -157,7 +172,9 @@ export interface FileRoutesByTo {
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/refresh': typeof ApiAuthRefreshRoute
   '/customers': typeof AuthenticatedCustomersIndexRoute
+  '/api/attachments/$id/file': typeof ApiAttachmentsIdFileRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
+  '/api/uploads/package-images/$name': typeof ApiUploadsPackageImagesNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -178,7 +195,9 @@ export interface FileRoutesById {
   '/api/auth/me': typeof ApiAuthMeRoute
   '/api/auth/refresh': typeof ApiAuthRefreshRoute
   '/_authenticated/customers/': typeof AuthenticatedCustomersIndexRoute
+  '/api/attachments/$id/file': typeof ApiAttachmentsIdFileRoute
   '/api/public/whatsapp/webhook': typeof ApiPublicWhatsappWebhookRoute
+  '/api/uploads/package-images/$name': typeof ApiUploadsPackageImagesNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -199,7 +218,9 @@ export interface FileRouteTypes {
     | '/api/auth/me'
     | '/api/auth/refresh'
     | '/customers/'
+    | '/api/attachments/$id/file'
     | '/api/public/whatsapp/webhook'
+    | '/api/uploads/package-images/$name'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -218,7 +239,9 @@ export interface FileRouteTypes {
     | '/api/auth/me'
     | '/api/auth/refresh'
     | '/customers'
+    | '/api/attachments/$id/file'
     | '/api/public/whatsapp/webhook'
+    | '/api/uploads/package-images/$name'
   id:
     | '__root__'
     | '/_authenticated'
@@ -238,7 +261,9 @@ export interface FileRouteTypes {
     | '/api/auth/me'
     | '/api/auth/refresh'
     | '/_authenticated/customers/'
+    | '/api/attachments/$id/file'
     | '/api/public/whatsapp/webhook'
+    | '/api/uploads/package-images/$name'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,7 +273,9 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthMeRoute: typeof ApiAuthMeRoute
   ApiAuthRefreshRoute: typeof ApiAuthRefreshRoute
+  ApiAttachmentsIdFileRoute: typeof ApiAttachmentsIdFileRoute
   ApiPublicWhatsappWebhookRoute: typeof ApiPublicWhatsappWebhookRoute
+  ApiUploadsPackageImagesNameRoute: typeof ApiUploadsPackageImagesNameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -372,11 +399,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthRefreshRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/attachments/$id/file': {
+      id: '/api/attachments/$id/file'
+      path: '/api/attachments/$id/file'
+      fullPath: '/api/attachments/$id/file'
+      preLoaderRoute: typeof ApiAttachmentsIdFileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/whatsapp/webhook': {
       id: '/api/public/whatsapp/webhook'
       path: '/api/public/whatsapp/webhook'
       fullPath: '/api/public/whatsapp/webhook'
       preLoaderRoute: typeof ApiPublicWhatsappWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/uploads/package-images/$name': {
+      id: '/api/uploads/package-images/$name'
+      path: '/api/uploads/package-images/$name'
+      fullPath: '/api/uploads/package-images/$name'
+      preLoaderRoute: typeof ApiUploadsPackageImagesNameRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -420,7 +461,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthMeRoute: ApiAuthMeRoute,
   ApiAuthRefreshRoute: ApiAuthRefreshRoute,
+  ApiAttachmentsIdFileRoute: ApiAttachmentsIdFileRoute,
   ApiPublicWhatsappWebhookRoute: ApiPublicWhatsappWebhookRoute,
+  ApiUploadsPackageImagesNameRoute: ApiUploadsPackageImagesNameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

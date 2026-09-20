@@ -456,18 +456,19 @@ function WhatsAppInbox() {
           thread={activeThread}
           onClose={() => setDialog(null)}
           onCreate={(data) => {
-            const id = addCustomer({
+            void addCustomer({
               name: data.name,
               phone: localPhone(activeThread.phone),
               email: data.email,
               city: data.city,
               source: data.source,
               ownerId: currentUser.id,
-            });
-            linkMutation.mutate({
-              phone: activeThread.phone,
-              customerId: id,
-              ...(data.name ? { contactName: data.name } : {}),
+            }).then((id) => {
+              linkMutation.mutate({
+                phone: activeThread.phone,
+                customerId: id,
+                ...(data.name ? { contactName: data.name } : {}),
+              });
             });
           }}
         />

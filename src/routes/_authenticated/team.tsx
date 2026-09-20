@@ -67,6 +67,7 @@ function TeamPage() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    password: "",
     role: "agent" as Role,
     active: true,
   });
@@ -79,15 +80,23 @@ function TeamPage() {
     return { count: rows.length, total: rows.reduce((s, b) => s + b.amount, 0) };
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.name.trim() || !form.email.trim()) {
       toast.error("الاسم والبريد مطلوبان");
       return;
     }
-    addEmployee(form);
-    setOpen(false);
-    setForm({ name: "", email: "", role: "agent", active: true });
-    toast.success("تمت إضافة الموظف");
+    if (form.password.trim().length < 8) {
+      toast.error("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
+      return;
+    }
+    try {
+      await addEmployee(form);
+      setOpen(false);
+      setForm({ name: "", email: "", password: "", role: "agent", active: true });
+      toast.success("تمت إضافة الموظف");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "تعذر إضافة الموظف");
+    }
   };
 
   return (
@@ -131,6 +140,16 @@ function TeamPage() {
                     dir="ltr"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>كلمة المرور (لحساب الدخول)</Label>
+                  <Input
+                    dir="ltr"
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
+                    placeholder="8 أحرف على الأقل"
                   />
                 </div>
                 <div className="grid gap-1.5">

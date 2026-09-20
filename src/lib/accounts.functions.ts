@@ -108,3 +108,56 @@ export const setAccountRole = createServerFn({ method: "POST" })
     await query(`update users set role = $1 where id = $2`, [data.role, data.id]);
     return { ok: true as const, message: "تم تحديث الدور" };
   });
+
+const PERMISSION_VALUES = [
+  "packages.view",
+  "packages.edit",
+  "customers.view",
+  "customers.edit",
+  "bookings.view",
+  "bookings.edit",
+  "pipeline.view",
+  "pipeline.edit",
+  "team.view",
+  "team.edit",
+  "reports.view",
+  "reports.all",
+] as const;
+
+const updateSettingsSchema = z.object({
+  id: z.string().uuid(),
+  role: z.enum(["admin", "sales_manager", "agent", "accountant"]).optional(),
+  active: z.boolean().optional(),
+  /** null = إعادة الصلاحيات لصلاحيات الدور الافتراضية (يمسح التخصيص) */
+  permissions: z.array(z.enum(PERMISSION_VALUES)).nullable().optional(),
+});
+
+/**
+ * تعديل بيانات موظف (الدور/الحالة/الصلاحيات المخصّصة) — للمدير فقط.
+ * تُستخدم من شاشة "الموظفون والصلاحيات" (team.tsx عبر useCrm().updateEmployee).
+ */
+export const updateEmployeeSettings = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((data: unknown) => updateSettingsSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context as never);
+    const sets: string[] = [];
+    const params: unknown[] = [];
+    let i = 1;
+    if (data.role !== undefined) {
+      sets.push(`role = $${i++}`);
+      params.push(data.role);
+    }
+    if (data.active !== undefined) {
+      sets.push(`active = $${i++}`);
+      params.push(data.active);
+    }
+    if (data.permissions !== undefined) {
+      sets.push(`permissions = $${i++}`);
+      params.push(data.permissions); // null clears the override
+    }
+    if (sets.length === 0) return { ok: true as const, message: "لا يوجد تغيير" };
+    params.push(data.id);
+    await query(`update users set ${sets.join(", ")} where id = $${i}`, params);
+    return { ok: true as const, message: "تم تحديث بيانات الموظف" };
+  });
