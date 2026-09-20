@@ -48,17 +48,36 @@ Copy `.env.example` to `.env` and fill in:
 
 ## 4. Deploy the app container
 
-Either:
+**Plain Docker Compose** (no Coolify):
 
 ```sh
 docker compose up -d --build
 ```
 
-or, on Coolify, deploy this repo's `Dockerfile` as its own service pointed
-at this client's `DATABASE_URL` and secrets, with a persistent volume
-mounted at `/app/data/uploads` (package images, customer attachments,
-company logo — see `src/lib/upload.functions.ts`... *not yet implemented,
-see note at the bottom of this file*).
+Note the shipped `docker-compose.yaml` does **not** publish any host ports
+(`ports:`) — `postgres` is reachable only from `app` over the internal
+Compose network, and `app` uses `expose: ["3000"]` rather than a host port
+mapping, since a reverse proxy (or Coolify, below) is expected to sit in
+front of it. For a bare `docker compose up` with no proxy at all, add a
+`docker-compose.override.yaml` next to it with:
+
+```yaml
+services:
+  app:
+    ports: ["3000:3000"]
+```
+
+**On Coolify**: add this repository as a **Docker Compose** resource
+(Coolify reads `docker-compose.yaml` directly — see
+[Coolify's Docker Compose docs](https://coolify.io/docs/knowledge-base/docker/compose)).
+Set this client's `DATABASE_URL`/`JWT_SECRET`/etc. as environment variables
+on the `app` service in Coolify's UI (or via a `.env` Coolify loads), then
+assign a **Domain** to the `app` service from Coolify's service settings —
+Coolify's built-in proxy terminates TLS and routes that domain to the
+container's exposed port 3000 automatically; you do not need to (and should
+not) publish a host port yourself. Coolify persists the `postgres-data` and
+`uploads-data` named volumes across redeploys the same way any other
+Compose-based Coolify service does.
 
 ## 5. Create the first admin account
 
@@ -72,10 +91,11 @@ Settings → المستخدمون (role: `admin` / `sales_manager` / `agent` /
 
 ## 6. Set up this client's branding
 
-`company_settings` (a single row per install) holds `company_name`,
-`logo_url`, `accent_color`, `contact_phone`, `contact_email`. *(Wiring this
-into the header/login page/page title — Phase 7 of the original plan — is
-not yet implemented in the UI; the table exists and is ready for it.)*
+As the admin, go to Settings → بيانات الشركة → الهوية البصرية والعلامة
+التجارية and set the company name, upload a logo, and pick an accent color.
+This is stored in `company_settings` (a single row per install) and is read
+on the login page (before authentication), the sidebar header, and the page
+title.
 
 ## Meta WhatsApp webhook setup (per client)
 
@@ -92,14 +112,17 @@ https://<this-client's-domain>/api/public/whatsapp/webhook
   verified via the `X-Hub-Signature-256` HMAC-SHA256 header before any
   payload is processed.
 
-## Known gaps as of this deployment setup (see final handoff notes)
+## Known gaps as of this deployment setup
 
-- The full migration of `src/lib/crm-data.tsx` off its in-memory React store
-  onto these Postgres tables (packages/customers/bookings/etc.) is **not**
-  done yet — the app's day-to-day CRM data still resets on every
-  restart/redeploy. Only auth, integration config, and the WhatsApp/Meta
-  logs are Postgres-backed so far.
-- Local file storage (`src/lib/upload.functions.ts`, Phase 2 of the plan)
-  is not implemented — there is no working image/attachment/logo upload to
-  disk yet; `data/uploads/` volume above is provisioned for it but unused.
-- `company_settings` branding is not wired into the UI yet (see step 6).
+- Server-side permission checks are limited to "is logged in" plus
+  owner-scoping (an `agent` only sees their own customers/bookings/
+  opportunities); there is no server-side enforcement of finer-grained
+  permissions like `packages.edit` per role — those remain UI-only, matching
+  the original app's design. Tighten this later if a client needs it.
+- A full `docker compose up` from a clean checkout (rather than a directly
+  installed Postgres + `vite dev`) has not been exercised end-to-end — do
+  this once before the first real client install.
+- WhatsApp (Meta), OpenAI, and SMTP integrations are structurally complete
+  and match their documented API contracts, but have not been exercised
+  against real credentials — verify each with a real Meta WhatsApp Business
+  app, a real OpenAI key, and a real SMTP server before relying on them.
