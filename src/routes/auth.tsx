@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { login } from "@/lib/auth";
 import { useCrm } from "@/lib/crm-data";
 import { needsBootstrap, bootstrapAdmin } from "@/lib/bootstrap.functions";
+import { useCompanyBranding } from "@/lib/branding";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ function AuthPage() {
   const [bootstrap, setBootstrap] = useState(false);
   const statusFn = useServerFn(needsBootstrap);
   const bootstrapFn = useServerFn(bootstrapAdmin);
+  const { data: branding } = useCompanyBranding();
 
   useEffect(() => {
     void statusFn({})
@@ -87,10 +89,20 @@ function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4" dir="rtl">
       <div className="w-full max-w-md space-y-5">
         <div className="flex flex-col items-center gap-2 text-center">
-          <span className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Plane className="size-7" />
-          </span>
-          <h1 className="text-2xl font-extrabold text-foreground">طواف للسياحة</h1>
+          {branding?.logoUrl ? (
+            <img
+              src={branding.logoUrl}
+              alt={branding.companyName}
+              className="size-14 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Plane className="size-7" />
+            </span>
+          )}
+          <h1 className="text-2xl font-extrabold text-foreground">
+            {branding?.companyName ?? "طواف للسياحة"}
+          </h1>
           <p className="text-sm text-muted-foreground">نظام إدارة العملاء والحجوزات</p>
         </div>
 

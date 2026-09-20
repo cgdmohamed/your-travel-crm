@@ -20,6 +20,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useCrm, ROLE_LABELS, type Permission } from "@/lib/crm-data";
 import { useSettings } from "@/lib/settings";
+import { useCompanyBranding } from "@/lib/branding";
 import { GlobalSearch } from "@/components/crm/GlobalSearch";
 import { QuickActions } from "@/components/crm/QuickActions";
 
@@ -48,6 +49,8 @@ export function AppLayout({
   const { can, currentUser, refreshAuth } = useCrm();
   const navigate = useNavigate();
   const { settings } = useSettings();
+  const { data: branding } = useCompanyBranding();
+  const companyName = branding?.companyName ?? settings.companyName;
   // يُحسب التاريخ بعد الترطيب حتى لا يختلف نص الخادم عن المتصفح (فرق التوقيت)
   const [today, setToday] = useState("");
   useEffect(() => {
@@ -65,12 +68,20 @@ export function AppLayout({
     <div className="flex min-h-screen bg-background" dir="rtl">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground md:flex">
         <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
-          <span className="flex size-10 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
-            <Plane className="size-5" />
-          </span>
-          <div>
-            <p className="text-base font-bold leading-tight">{settings.companyName}</p>
-            <p className="text-xs text-sidebar-foreground/85">{settings.companyTagline}</p>
+          {branding?.logoUrl ? (
+            <img
+              src={branding.logoUrl}
+              alt={companyName}
+              className="size-10 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+              <Plane className="size-5" />
+            </span>
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-base font-bold leading-tight">{companyName}</p>
+            <p className="truncate text-xs text-sidebar-foreground/85">{settings.companyTagline}</p>
           </div>
         </div>
         <nav className="flex flex-1 flex-col gap-1 px-3 py-5">

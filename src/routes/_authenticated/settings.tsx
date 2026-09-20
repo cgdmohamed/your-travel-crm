@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, RotateCcw, Save } from "lucide-react";
+import { Building2, ImagePlus, Loader2, RotateCcw, Save } from "lucide-react";
 import { AppLayout } from "@/components/crm/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSettings, type AppSettings } from "@/lib/settings";
+import { useCompanyBranding } from "@/lib/branding";
+import { updateCompanySettings, uploadCompanyLogo } from "@/lib/company.functions";
+import { readFile } from "@/components/crm/FileDrop";
 import { IntegrationsTab } from "@/components/crm/IntegrationsTab";
 import { useCrm, ROLE_LABELS } from "@/lib/crm-data";
 
@@ -56,6 +61,163 @@ function Field({
       {children}
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
     </div>
+  );
+}
+
+/**
+ * الهوية البصرية للشركة (اسم/شعار/لون مميز/تواصل) — محفوظة في قاعدة البيانات
+ * (`company_settings`)، بعكس بقية حقول هذه الشاشة (تُحفظ محلياً على هذا الجهاز
+ * فقط). هذه الحقول هي التي تظهر فعلياً في القائمة الجانبية وصفحة الدخول
+ * ولكل من يفتح النظام، لذا تعديلها مقصور على المدير.
+ */
+function BrandingCard({ isAdmin }: { isAdmin: boolean }) {
+  const qc = useQueryClient();
+  const { data: branding, isLoading } = useCompanyBranding();
+  const updateFn = useServerFn(updateCompanySettings);
+  const uploadFn = useServerFn(uploadCompanyLogo);
+
+  const [name, setName] = useState("");
+  const [accent, setAccent] = useState("#2563eb");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (!branding) return;
+    setName(branding.companyName);
+    setAccent(branding.accentColor);
+    setPhone(branding.contactPhone ?? "");
+    setEmail(branding.contactEmail ?? "");
+  }, [branding]);
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["company-settings"] });
+
+  const save = async () => {
+    setSaving(true);
+    const r = await updateFn({
+      data: { companyName: name, accentColor: accent, contactPhone: phone, contactEmail: email },
+    }).catch((err: unknown) => ({
+      ok: false as const,
+      message: err instanceof Error ? err.message : "تعذر الحفظ",
+    }));
+    setSaving(false);
+    if (!r.ok) {
+      toast.error(r.message);
+      return;
+    }
+    toast.success(r.message ?? "تم الحفظ");
+    await invalidate();
+  };
+
+  const pickLogo = async (file: File | undefined) => {
+    if (!file) return;
+    const picked = await readFile(file);
+    if (!picked) return;
+    setUploading(true);
+    const r = await uploadFn({ data: { fileName: picked.name, dataUrl: picked.dataUrl } }).catch(
+      (err: unknown) => ({ ok: false as const, error: err instanceof Error ? err.message : "تعذر الرفع" }),
+    );
+    setUploading(false);
+    if (!r.ok) {
+      toast.error("error" in r ? r.error : "تعذر رفع الشعار");
+      return;
+    }
+    toast.success("تم رفع الشعار");
+    await invalidate();
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle className="text-base">الهوية البصرية والعلامة التجارية</CardTitle>
+        <span className="text-xs text-muted-foreground">
+          تظهر للجميع في القائمة الجانبية وصفحة الدخول
+        </span>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!isAdmin ? (
+          <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">
+            تعديل الهوية البصرية للشركة متاح لمدير الشركة فقط. القيم الحالية معروضة هنا للاطّلاع.
+          </p>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full border bg-muted">
+            {branding?.logoUrl ? (
+              <img src={branding.logoUrl} alt="شعار الشركة" className="size-full object-cover" />
+            ) : (
+              <Building2 className="size-6 text-muted-foreground" />
+            )}
+          </div>
+          {isAdmin ? (
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-dashed px-3 py-2 text-sm font-medium text-foreground hover:border-primary/60">
+              {uploading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <ImagePlus className="size-4" />
+              )}
+              رفع شعار جديد
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  void pickLogo(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          ) : null}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="اسم الشركة">
+            <Input value={name} onChange={(e) => setName(e.target.value)} disabled={!isAdmin} />
+          </Field>
+          <Field label="اللون المميز" hint="يُطبَّق فوراً على الأزرار والروابط الأساسية">
+            <div className="flex items-center gap-2">
+              <Input
+                type="color"
+                className="h-10 w-14 cursor-pointer p-1"
+                value={/^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#2563eb"}
+                onChange={(e) => setAccent(e.target.value)}
+                disabled={!isAdmin}
+              />
+              <Input
+                dir="ltr"
+                value={accent}
+                onChange={(e) => setAccent(e.target.value)}
+                disabled={!isAdmin}
+                className="text-right"
+              />
+            </div>
+          </Field>
+          <Field label="هاتف التواصل">
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} disabled={!isAdmin} />
+          </Field>
+          <Field label="بريد التواصل">
+            <Input
+              type="email"
+              dir="ltr"
+              className="text-right"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={!isAdmin}
+            />
+          </Field>
+        </div>
+
+        {isAdmin ? (
+          <div className="flex justify-end">
+            <Button onClick={() => void save()} disabled={saving || isLoading}>
+              {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+              حفظ بيانات الشركة
+            </Button>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -118,10 +280,11 @@ function SettingsPage() {
             <TabsTrigger value="users">المستخدمون والصلاحيات</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="company" className="mt-4">
+          <TabsContent value="company" className="mt-4 space-y-4">
+            <BrandingCard isAdmin={currentUser.role === "admin"} />
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">بيانات الشركة</CardTitle>
+                <CardTitle className="text-base">تفضيلات إضافية (تُحفظ على هذا الجهاز فقط)</CardTitle>
               </CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
                 <Field label="اسم الشركة">

@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { CrmProvider } from "@/lib/crm-data";
 import { SettingsProvider } from "@/lib/settings";
+import { useCompanyBrandingEffect } from "@/lib/branding";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -121,6 +122,13 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+function BrandingEffect() {
+  // يطبّق اللون المميز المحفوظ + عنوان الصفحة على كل الشاشات (بما فيها صفحة
+  // الدخول قبل تسجيل الدخول). لا يعرض أي شيء بنفسه.
+  useCompanyBrandingEffect();
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -129,6 +137,7 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         <SettingsProvider>
           <CrmProvider>
+            <BrandingEffect />
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
             <Toaster position="top-center" richColors />
