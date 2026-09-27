@@ -70,3 +70,17 @@ export async function whatsappCredentials() {
     appSecret: pick(cfg.appSecret, process.env["WHATSAPP_APP_SECRET"]),
   };
 }
+
+/** إعدادات SMTP: القيمة المحفوظة في القاعدة أولاً، ثم متغيّرات البيئة كـfallback */
+export async function smtpCredentials() {
+  const cfg = await readConfig<SmtpConfig>("smtp");
+  return {
+    host: pick(cfg.host, process.env["SMTP_HOST"]),
+    port: pick(cfg.port, process.env["SMTP_PORT"]),
+    username: pick(cfg.username, process.env["SMTP_USERNAME"]),
+    password: pick(cfg.password, process.env["SMTP_PASSWORD"]),
+    fromEmail: pick(cfg.fromEmail, process.env["SMTP_FROM_EMAIL"]),
+    fromName: pick(cfg.fromName, process.env["SMTP_FROM_NAME"]),
+    secure: pick(cfg.secure, process.env["SMTP_SECURE"]),
+  };
+}

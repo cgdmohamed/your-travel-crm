@@ -61,7 +61,7 @@ export const addPayment = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => paymentInput.parse(data))
   .handler(async ({ data, context }): Promise<Payment> => {
     const time = nowHHMM();
-    const { payment, customerName, customerPhone, customerEmail, customerCity } =
+    const { payment, customerName, customerPhone, customerEmail, customerCity, bookingOwnerId, bookingRef } =
       await withTransaction(async (tx) => {
         const pay = await tx.query<PaymentRow>(
           `insert into payments (booking_id, customer_id, paid_on, amount, method, reference, collected_by, payment_time)
@@ -80,12 +80,14 @@ export const addPayment = createServerFn({ method: "POST" })
         );
         const p = pay.rows[0]!;
 
-        await tx.query(
+        const bk = await tx.query<{ owner_id: string | null; ref: string }>(
           `update bookings set paid = paid + $1,
                   status = case when paid + $1 >= amount then 'paid' else status end
-           where id = $2`,
+           where id = $2
+           returning owner_id, ref`,
           [data.amount, data.bookingId],
         );
+        const b = bk.rows[0];
 
         const cust = await tx.query<{ name: string; phone: string; email: string | null; city: string | null }>(
           `select name, phone, email, city from customers where id = $1`,
@@ -98,6 +100,8 @@ export const addPayment = createServerFn({ method: "POST" })
           customerPhone: c?.phone,
           customerEmail: c?.email ?? undefined,
           customerCity: c?.city ?? undefined,
+          bookingOwnerId: b?.owner_id ?? null,
+          bookingRef: b?.ref ?? "",
         };
       });
 
@@ -110,6 +114,22 @@ export const addPayment = createServerFn({ method: "POST" })
       city: customerCity,
       value: data.amount,
     });
+
+    try {
+      const { notifyUser, notifyRole } = await import("@/lib/notifications.server");
+      const notif = {
+        type: "payment_recorded",
+        title: "دفعة جديدة",
+        body: `تم تسجيل دفعة على الحجز ${bookingRef}`,
+        link: "/bookings",
+      };
+      if (bookingOwnerId && bookingOwnerId !== context.userId) {
+        await notifyUser(bookingOwnerId, notif);
+      }
+      await notifyRole("admin", notif, context.userId);
+    } catch (err) {
+      console.error("notify payment recorded failed", err);
+    }
 
     return toPayment(payment);
   });

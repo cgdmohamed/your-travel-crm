@@ -61,6 +61,23 @@ export const createAccount = createServerFn({ method: "POST" })
       `insert into users (email, password_hash, name, role) values ($1, $2, $3, $4)`,
       [email, passwordHash, data.fullName, data.role],
     );
+
+    try {
+      const { notifyRole } = await import("@/lib/notifications.server");
+      await notifyRole(
+        "admin",
+        {
+          type: "account_action",
+          title: "حساب موظف جديد",
+          body: `تم إنشاء حساب لـ${data.fullName} (${email})`,
+          link: "/team",
+        },
+        (context as { userId: string }).userId,
+      );
+    } catch (err) {
+      console.error("notify account created failed", err);
+    }
+
     return { ok: true as const, message: "تم إنشاء الحساب" };
   });
 
@@ -75,6 +92,18 @@ export const deleteAccount = createServerFn({ method: "POST" })
     }
     await query(`update users set active = false where id = $1`, [data.id]);
     await query(`update refresh_tokens set revoked = true where user_id = $1`, [data.id]);
+
+    try {
+      const { notifyRole } = await import("@/lib/notifications.server");
+      await notifyRole(
+        "admin",
+        { type: "account_action", title: "تعطيل حساب موظف", body: "تم تعطيل حساب موظف", link: "/team" },
+        (context as { userId: string }).userId,
+      );
+    } catch (err) {
+      console.error("notify account deleted failed", err);
+    }
+
     return { ok: true as const, message: "تم تعطيل الحساب" };
   });
 
@@ -106,6 +135,18 @@ export const setAccountRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context as never);
     await query(`update users set role = $1 where id = $2`, [data.role, data.id]);
+
+    try {
+      const { notifyRole } = await import("@/lib/notifications.server");
+      await notifyRole(
+        "admin",
+        { type: "account_action", title: "تغيير دور موظف", body: "تم تغيير دور أحد الموظفين", link: "/team" },
+        (context as { userId: string }).userId,
+      );
+    } catch (err) {
+      console.error("notify role changed failed", err);
+    }
+
     return { ok: true as const, message: "تم تحديث الدور" };
   });
 
@@ -159,5 +200,19 @@ export const updateEmployeeSettings = createServerFn({ method: "POST" })
     if (sets.length === 0) return { ok: true as const, message: "لا يوجد تغيير" };
     params.push(data.id);
     await query(`update users set ${sets.join(", ")} where id = $${i}`, params);
+
+    if (data.role !== undefined) {
+      try {
+        const { notifyRole } = await import("@/lib/notifications.server");
+        await notifyRole(
+          "admin",
+          { type: "account_action", title: "تغيير دور موظف", body: "تم تغيير دور أحد الموظفين", link: "/team" },
+          (context as { userId: string }).userId,
+        );
+      } catch (err) {
+        console.error("notify role changed failed", err);
+      }
+    }
+
     return { ok: true as const, message: "تم تحديث بيانات الموظف" };
   });

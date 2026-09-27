@@ -64,6 +64,21 @@ async function processEvent(payload: { entry?: Array<{ changes?: Array<{ value?:
     } catch (err) {
       console.error("auto classify failed", err);
     }
+
+    // إشعار الأدمن ومدير المبيعات برسالة واردة جديدة — الصندوق مشترك، مفيش "مالك" محدد للمحادثة
+    try {
+      const { notifyRole } = await import("@/lib/notifications.server");
+      const notif = {
+        type: "whatsapp_message",
+        title: "رسالة واتساب جديدة",
+        body: `${phone}: ${body.slice(0, 140)}`,
+        link: "/whatsapp",
+      };
+      await notifyRole("admin", notif);
+      await notifyRole("sales_manager", notif);
+    } catch (err) {
+      console.error("notify whatsapp message failed", err);
+    }
   }
 
   // حالات تسليم الرسائل الصادرة

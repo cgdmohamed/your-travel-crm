@@ -11,7 +11,6 @@ import {
   UserCog,
   BarChart3,
   Plane,
-  Bell,
   Settings,
   CalendarDays,
   LogOut,
@@ -23,6 +22,7 @@ import { useSettings } from "@/lib/settings";
 import { useCompanyBranding } from "@/lib/branding";
 import { GlobalSearch } from "@/components/crm/GlobalSearch";
 import { QuickActions } from "@/components/crm/QuickActions";
+import { NotificationsBell } from "@/components/crm/NotificationsBell";
 
 const NAV: { to: string; label: string; icon: typeof Package; perm: Permission }[] = [
   { to: "/", label: "لوحة المؤشرات", icon: LayoutDashboard, perm: "packages.view" },
@@ -139,10 +139,7 @@ export function AppLayout({
             <CalendarDays className="size-4" />
             <span>{today}</span>
           </div>
-          <span className="relative flex size-9 items-center justify-center rounded-full bg-secondary text-secondary-foreground" title="الإشعارات">
-            <Bell className="size-4" />
-            <span className="absolute -left-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">3</span>
-          </span>
+          <NotificationsBell />
         </header>
 
         <nav className="flex gap-1 overflow-x-auto border-b bg-card px-3 py-2 md:hidden">

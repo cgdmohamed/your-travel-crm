@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireAuth } from "@/lib/auth-middleware";
 
 const mask = (v?: string) => (v ? `••••${v.slice(-4)}` : "");
 
@@ -22,7 +23,7 @@ export type IntegrationsStatus = {
 /** حالة كل التكاملات مع إخفاء المفاتيح */
 export const getIntegrationsStatus = createServerFn({ method: "GET" }).handler(
   async (): Promise<IntegrationsStatus> => {
-    const { readConfig, metaCredentials, whatsappCredentials } = await import(
+    const { readConfig, metaCredentials, whatsappCredentials, smtpCredentials } = await import(
       "@/lib/integrations.server"
     );
     const meta = await metaCredentials();
@@ -30,7 +31,7 @@ export const getIntegrationsStatus = createServerFn({ method: "GET" }).handler(
     const wp = await readConfig<{ siteUrl?: string; username?: string; appPassword?: string }>(
       "wordpress",
     );
-    const smtp = await readConfig<import("@/lib/integrations.server").SmtpConfig>("smtp");
+    const smtp = await smtpCredentials();
     return {
       meta: {
         connected: Boolean(meta.pixelId && meta.token),
@@ -71,21 +72,57 @@ const saveSchema = z.object({
 
 /** حفظ بيانات ربط تكامل (القيم الفارغة تُهمل، والقيمة "" تحذف المفتاح) */
 export const saveIntegration = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
   .inputValidator((data: unknown) => saveSchema.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { writeConfig } = await import("@/lib/integrations.server");
     await writeConfig(data.key, data.values, data.updatedBy);
+
+    try {
+      const { notifyRole } = await import("@/lib/notifications.server");
+      await notifyRole(
+        "admin",
+        {
+          type: "integration_change",
+          title: "تغيير في التكاملات",
+          body: `تم تحديث إعدادات تكامل "${data.key}"`,
+          link: "/settings",
+        },
+        context.userId,
+      );
+    } catch (err) {
+      console.error("notify integration change failed", err);
+    }
+
     return { ok: true as const };
   });
 
 /** حذف بيانات ربط تكامل */
 export const disconnectIntegration = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
   .inputValidator((data: unknown) =>
     z.object({ key: z.enum(["meta", "whatsapp", "wordpress", "smtp"]) }).parse(data),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const { query } = await import("@/lib/db.server");
     await query(`delete from integration_config where key = $1`, [data.key]);
+
+    try {
+      const { notifyRole } = await import("@/lib/notifications.server");
+      await notifyRole(
+        "admin",
+        {
+          type: "integration_change",
+          title: "فصل تكامل",
+          body: `تم فصل تكامل "${data.key}"`,
+          link: "/settings",
+        },
+        context.userId,
+      );
+    } catch (err) {
+      console.error("notify integration change failed", err);
+    }
+
     return { ok: true as const };
   });
 

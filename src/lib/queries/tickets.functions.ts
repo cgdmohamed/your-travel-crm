@@ -67,7 +67,7 @@ const ticketInput = z.object({
 export const addTicket = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((data: unknown) => ticketInput.parse(data))
-  .handler(async ({ data }): Promise<Ticket> => {
+  .handler(async ({ data, context }): Promise<Ticket> => {
     const row = await queryOne<TicketRow>(
       `insert into tickets
          (booking_id, customer_id, passenger, airline, flight_no, route, depart_date, return_date,
@@ -89,5 +89,27 @@ export const addTicket = createServerFn({ method: "POST" })
         data.status,
       ],
     );
-    return toTicket(row!);
+    const ticket = toTicket(row!);
+
+    try {
+      const { notifyUser, notifyRole } = await import("@/lib/notifications.server");
+      const booking = await queryOne<{ owner_id: string | null }>(
+        `select owner_id from bookings where id = $1`,
+        [ticket.bookingId],
+      );
+      const notif = {
+        type: "ticket_added",
+        title: "تذكرة جديدة",
+        body: `تذكرة لـ${ticket.passenger} على حجز ${ticket.bookingId}`,
+        link: "/bookings",
+      };
+      if (booking?.owner_id && booking.owner_id !== context.userId) {
+        await notifyUser(booking.owner_id, notif);
+      }
+      await notifyRole("admin", notif, context.userId);
+    } catch (err) {
+      console.error("notify ticket added failed", err);
+    }
+
+    return ticket;
   });

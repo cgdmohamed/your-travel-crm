@@ -1,15 +1,15 @@
 /** إرسال بريد فعلي + اختبار اتصال خادم البريد الصادر SMTP (خادم فقط) */
 import nodemailer from "nodemailer";
-import { readConfig, type SmtpConfig } from "@/lib/integrations.server";
+import { smtpCredentials } from "@/lib/integrations.server";
 
-/** يرسل بريدًا حقيقيًا عبر إعدادات SMTP المحفوظة في integration_config. */
+/** يرسل بريدًا حقيقيًا عبر إعدادات SMTP (المحفوظة في integration_config أو متغيّرات البيئة). */
 export async function sendEmail(opts: {
   to: string;
   subject: string;
   html: string;
   text?: string;
 }): Promise<{ ok: boolean; message: string }> {
-  const cfg = await readConfig<SmtpConfig>("smtp");
+  const cfg = await smtpCredentials();
   const host = cfg.host?.trim();
   const port = Number(cfg.port ?? "587");
   if (!host || !cfg.username || !cfg.password || !cfg.fromEmail) {
@@ -36,7 +36,7 @@ export async function sendEmail(opts: {
 }
 
 export async function testSmtpConnection(): Promise<{ ok: boolean; message: string }> {
-  const cfg = await readConfig<SmtpConfig>("smtp");
+  const cfg = await smtpCredentials();
   const host = cfg.host?.trim();
   const port = Number(cfg.port ?? "587");
   if (!host) return { ok: false, message: "أدخل عنوان خادم البريد أولاً" };

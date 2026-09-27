@@ -109,13 +109,31 @@ export const setBookingStatus = createServerFn({ method: "POST" })
       .object({ id: z.string().uuid(), status: z.enum(["draft", "confirmed", "paid", "cancelled"]) })
       .parse(data),
   )
-  .handler(async ({ data }): Promise<Booking> => {
+  .handler(async ({ data, context }): Promise<Booking> => {
     const row = await queryOne<BookingRow>(
       `update bookings set status = $1 where id = $2 returning ${BOOKING_COLUMNS}`,
       [data.status, data.id],
     );
     if (!row) throw new Error("الحجز غير موجود");
-    return toBooking(row);
+    const booking = toBooking(row);
+
+    try {
+      const { notifyUser, notifyRole } = await import("@/lib/notifications.server");
+      const notif = {
+        type: "booking_status",
+        title: "تغيّرت حالة حجز",
+        body: `الحجز ${booking.ref} أصبح "${booking.status}"`,
+        link: "/bookings",
+      };
+      if (booking.ownerId && booking.ownerId !== context.userId) {
+        await notifyUser(booking.ownerId, notif);
+      }
+      await notifyRole("admin", notif, context.userId);
+    } catch (err) {
+      console.error("notify booking status failed", err);
+    }
+
+    return booking;
   });
 
 const convertInput = z.object({
@@ -130,8 +148,8 @@ const convertInput = z.object({
 export const convertOpportunityToBooking = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((data: unknown) => convertInput.parse(data))
-  .handler(async ({ data }): Promise<{ booking: Booking; ref: string } | { error: string }> => {
-    return withTransaction(async (tx) => {
+  .handler(async ({ data, context }): Promise<{ booking: Booking; ref: string } | { error: string }> => {
+    const result = await withTransaction(async (tx) => {
       const opp = await tx.query<{
         id: string;
         customer_id: string;
@@ -141,7 +159,7 @@ export const convertOpportunityToBooking = createServerFn({ method: "POST" })
         data.opportunityId,
       ]);
       const o = opp.rows[0];
-      if (!o || !o.package_id) return { error: "الفرصة غير موجودة أو بدون باقة محددة" };
+      if (!o || !o.package_id) return { error: "الفرصة غير موجودة أو بدون باقة محددة" } as const;
 
       const status = data.paid >= data.amount ? "paid" : data.paid > 0 ? "confirmed" : "draft";
       const seq = await tx.query<{ nextval: string }>(`select nextval('booking_ref_seq')`);
@@ -159,6 +177,26 @@ export const convertOpportunityToBooking = createServerFn({ method: "POST" })
         booking.id,
         data.opportunityId,
       ]);
-      return { booking: toBooking(booking), ref };
+      return { booking: toBooking(booking), ref, ownerId: o.owner_id };
     });
+
+    if ("error" in result) return result;
+
+    try {
+      const { notifyUser, notifyRole } = await import("@/lib/notifications.server");
+      const notif = {
+        type: "opportunity_won",
+        title: "فرصة تحوّلت لحجز",
+        body: `الحجز ${result.ref} تم إنشاؤه من فرصة بيع`,
+        link: "/bookings",
+      };
+      if (result.ownerId && result.ownerId !== context.userId) {
+        await notifyUser(result.ownerId, notif);
+      }
+      await notifyRole("admin", notif, context.userId);
+    } catch (err) {
+      console.error("notify opportunity converted failed", err);
+    }
+
+    return { booking: result.booking, ref: result.ref };
   });

@@ -142,11 +142,31 @@ export const moveOpportunity = createServerFn({ method: "POST" })
       })
       .parse(data),
   )
-  .handler(async ({ data }): Promise<Opportunity> => {
+  .handler(async ({ data, context }): Promise<Opportunity> => {
     const row = await queryOne<OpportunityRow>(
       `update opportunities set stage = $1, updated_at = now() where id = $2 returning ${OPP_COLUMNS}`,
       [data.stage, data.id],
     );
     if (!row) throw new Error("الفرصة غير موجودة");
-    return toOpportunity(row);
+    const opportunity = toOpportunity(row);
+
+    if (opportunity.stage === "won" || opportunity.stage === "lost") {
+      try {
+        const { notifyUser, notifyRole } = await import("@/lib/notifications.server");
+        const notif = {
+          type: opportunity.stage === "won" ? "opportunity_won" : "opportunity_lost",
+          title: opportunity.stage === "won" ? "فرصة تم كسبها" : "فرصة تم فقدها",
+          body: `الفرصة "${opportunity.title}" أصبحت ${opportunity.stage === "won" ? "مكسوبة" : "مفقودة"}`,
+          link: "/pipeline",
+        };
+        if (opportunity.ownerId && opportunity.ownerId !== context.userId) {
+          await notifyUser(opportunity.ownerId, notif);
+        }
+        await notifyRole("admin", notif, context.userId);
+      } catch (err) {
+        console.error("notify opportunity stage failed", err);
+      }
+    }
+
+    return opportunity;
   });
