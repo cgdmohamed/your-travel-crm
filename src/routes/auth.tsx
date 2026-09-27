@@ -41,15 +41,31 @@ function AuthPage() {
   const [fullName, setFullName] = useState("");
   const [busy, setBusy] = useState(false);
   const [bootstrap, setBootstrap] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(true);
   const statusFn = useServerFn(needsBootstrap);
   const bootstrapFn = useServerFn(bootstrapAdmin);
   const { data: branding } = useCompanyBranding();
 
-  useEffect(() => {
+  const checkBootstrapStatus = () => {
+    setChecking(true);
+    setCheckError(null);
     void statusFn({})
-      .then((r) => setBootstrap(r.needed))
-      .catch(() => setBootstrap(false));
-  }, [statusFn]);
+      .then((r) => {
+        setBootstrap(r.needed);
+        setChecking(false);
+      })
+      .catch((err: unknown) => {
+        // Do NOT silently fall back to the login form here: the most likely
+        // cause is the `users` table not existing yet (migrations never ran
+        // against this deployment's Postgres) — showing a plain login form
+        // in that case leaves the admin with literally no way to get in.
+        setCheckError(err instanceof Error ? err.message : "تعذر التحقق من حالة النظام");
+        setChecking(false);
+      });
+  };
+
+  useEffect(checkBootstrapStatus, [statusFn]);
 
   const createFirstAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +122,32 @@ function AuthPage() {
           <p className="text-sm text-muted-foreground">نظام إدارة العملاء والحجوزات</p>
         </div>
 
-        {bootstrap ? (
+        {checking ? (
+          <Card className="shadow-sm">
+            <CardContent className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> جارٍ التحقق من حالة النظام...
+            </CardContent>
+          </Card>
+        ) : checkError ? (
+          <Card className="shadow-sm border-destructive/50">
+            <CardHeader>
+              <CardTitle className="text-base text-destructive">تعذر الاتصال بالنظام</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                تعذر التحقق مما إذا كان يوجد حساب مدير بالفعل. السبب الأرجح: قاعدة البيانات غير
+                متصلة، أو أن ملفات الترحيل (migrations) لم تُطبَّق بعد على هذه القاعدة — راجع
+                جدول <code dir="ltr">users</code> في Postgres، ثم أعد المحاولة.
+              </p>
+              <p className="rounded-md bg-muted p-2 text-xs text-muted-foreground" dir="ltr">
+                {checkError}
+              </p>
+              <Button type="button" variant="outline" className="w-full" onClick={checkBootstrapStatus}>
+                إعادة المحاولة
+              </Button>
+            </CardContent>
+          </Card>
+        ) : bootstrap ? (
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle className="text-base">إنشاء حساب المدير الأول</CardTitle>
