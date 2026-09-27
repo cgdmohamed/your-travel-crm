@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { login } from "@/lib/auth";
 import { useCrm } from "@/lib/crm-data";
 import { needsBootstrap, bootstrapAdmin } from "@/lib/bootstrap.functions";
+import { requestPasswordReset } from "@/lib/password-reset.functions";
 import { useCompanyBranding } from "@/lib/branding";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,12 @@ function AuthPage() {
   const [checking, setChecking] = useState(true);
   const statusFn = useServerFn(needsBootstrap);
   const bootstrapFn = useServerFn(bootstrapAdmin);
+  const requestResetFn = useServerFn(requestPasswordReset);
   const { data: branding } = useCompanyBranding();
+
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotBusy, setForgotBusy] = useState(false);
 
   const checkBootstrapStatus = () => {
     setChecking(true);
@@ -99,6 +105,18 @@ function AuthPage() {
     // this exact login until a full page reload.
     await refreshAuth();
     void navigate({ to: "/", replace: true });
+  };
+
+  const submitForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotBusy(true);
+    const message = await requestResetFn({ data: { email: forgotEmail.trim() } })
+      .then((r) => r.message)
+      .catch(() => "تعذر إرسال الطلب — حاول مرة أخرى");
+    setForgotBusy(false);
+    toast.success(message);
+    setForgotOpen(false);
+    setForgotEmail("");
   };
 
   return (
@@ -226,13 +244,52 @@ function AuthPage() {
                   دخول
                 </Button>
               </form>
+
+              {forgotOpen ? (
+                <form className="mt-4 space-y-3 border-t pt-4" onSubmit={submitForgotPassword}>
+                  <p className="text-xs text-muted-foreground">
+                    أدخل بريدك الإلكتروني، وسنرسل لك رابطًا لإعادة تعيين كلمة المرور إذا كان
+                    الحساب موجودًا.
+                  </p>
+                  <Input
+                    type="email"
+                    required
+                    dir="ltr"
+                    className="text-right"
+                    placeholder="name@company.com"
+                    value={forgotEmail}
+                    onChange={(ev) => setForgotEmail(ev.target.value)}
+                  />
+                  <div className="flex gap-2">
+                    <Button type="submit" size="sm" className="flex-1" disabled={forgotBusy}>
+                      {forgotBusy ? <Loader2 className="size-4 animate-spin" /> : null} إرسال رابط
+                      الاستعادة
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setForgotOpen(false)}
+                    >
+                      إلغاء
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  className="mt-3 w-full text-center text-xs font-medium text-primary hover:underline"
+                  onClick={() => setForgotOpen(true)}
+                >
+                  نسيت كلمة المرور؟
+                </button>
+              )}
             </CardContent>
           </Card>
         )}
 
         <p className="text-center text-xs text-muted-foreground">
-          الحسابات يُنشئها مدير الشركة من صفحة الإعدادات ← المستخدمون. لنسيان كلمة المرور، راجع
-          مدير الشركة لإعادة تعيينها.
+          الحسابات يُنشئها مدير الشركة من صفحة الإعدادات ← المستخدمون.
         </p>
       </div>
     </div>

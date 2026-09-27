@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { KeyRound, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/crm/AppLayout";
 import { Pagination, usePagination } from "@/components/crm/Pagination";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { resetAccountPassword } from "@/lib/accounts.functions";
 import {
   Dialog,
   DialogContent,
@@ -64,6 +67,7 @@ function TeamPage() {
   const { settings } = useSettings();
   const [open, setOpen] = useState(false);
   const [permsFor, setPermsFor] = useState<string | null>(null);
+  const [resetFor, setResetFor] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -188,6 +192,7 @@ function TeamPage() {
                 <TableHead className="text-right">الحجوزات</TableHead>
                 <TableHead className="text-right">المبيعات المحققة</TableHead>
                 <TableHead className="text-right">الحالة</TableHead>
+                {editable ? <TableHead className="text-right">إجراءات</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -259,6 +264,18 @@ function TeamPage() {
                         </Badge>
                       )}
                     </TableCell>
+                    {editable ? (
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 gap-1 px-2 text-[11px]"
+                          onClick={() => setResetFor(e.id)}
+                        >
+                          <KeyRound className="size-3.5" /> إعادة تعيين كلمة المرور
+                        </Button>
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 );
               })}
@@ -269,7 +286,73 @@ function TeamPage() {
       </Card>
 
       <PermissionsDialog employeeId={permsFor} onClose={() => setPermsFor(null)} />
+      <ResetPasswordDialog employeeId={resetFor} onClose={() => setResetFor(null)} />
     </AppLayout>
+  );
+}
+
+function ResetPasswordDialog({
+  employeeId,
+  onClose,
+}: {
+  employeeId: string | null;
+  onClose: () => void;
+}) {
+  const { employees } = useCrm();
+  const emp = employees.find((e) => e.id === employeeId) ?? null;
+  const resetFn = useServerFn(resetAccountPassword);
+  const [newPassword, setNewPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!emp) return;
+    if (newPassword.trim().length < 8) {
+      toast.error("كلمة المرور يجب أن تكون 8 أحرف على الأقل");
+      return;
+    }
+    setBusy(true);
+    const r = await resetFn({ data: { id: emp.id, newPassword: newPassword.trim() } }).catch(() => ({
+      ok: false as const,
+      message: "تعذر تعيين كلمة المرور",
+    }));
+    setBusy(false);
+    if (!r.ok) {
+      toast.error(r.message);
+      return;
+    }
+    toast.success(r.message);
+    setNewPassword("");
+    onClose();
+  };
+
+  return (
+    <Dialog open={!!emp} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent dir="rtl">
+        <DialogHeader>
+          <DialogTitle>تعيين كلمة مرور جديدة — {emp?.name ?? ""}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            سيتم تسجيل خروج {emp?.name ?? "الموظف"} من كل الأجهزة فورًا، ويحتاج تسجيل الدخول
+            مجددًا بكلمة المرور الجديدة.
+          </p>
+          <div className="space-y-1.5">
+            <Label>كلمة المرور الجديدة</Label>
+            <Input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="8 أحرف على الأقل"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => void submit()} disabled={busy}>
+            {busy ? <Loader2 className="size-4 animate-spin" /> : null} تعيين كلمة المرور
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
