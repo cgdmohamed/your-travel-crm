@@ -13,18 +13,27 @@ way, this database must not be shared with any other client.
 
 ## 2. Run migrations
 
-Migrations are plain SQL, no Supabase CLI or other tooling required.
+Migrations are plain SQL, no Supabase CLI or other tooling required — and
+you normally don't need to do anything here at all. The app container
+applies every `db/migrations/*.sql` file not yet recorded in its
+`schema_migrations` table automatically, every time it starts (see
+`scripts/migrate.mjs`, run by the Dockerfile's `CMD` before the server
+starts). This is idempotent and safe to run against an already-migrated
+database, so it's not gated on the Postgres volume being brand-new the way
+`docker-entrypoint-initdb.d` is.
+
+If you ever need to apply a migration manually (e.g. debugging outside the
+container), it's still plain SQL:
 
 ```sh
 psql "$DATABASE_URL" -f db/migrations/001_init.sql
 ```
 
-With the provided `docker-compose.yaml`, this happens automatically on first
-boot: Postgres's official image runs every `.sql` file under
-`/docker-entrypoint-initdb.d` (mounted from `db/migrations/`) the first time
-its data volume is empty. If you add a `002_*.sql` file later for an
-existing installation, apply it manually with `psql` instead — the
-init-scripts mechanism only runs once, against a brand-new database.
+If you do this, and later start the app container against the same
+database, either delete that database and start clean, or manually
+`insert into schema_migrations (name) values ('001_init.sql')` for whatever
+you already applied — otherwise the app's migration runner will try to
+re-run it and fail on "relation already exists".
 
 ## 3. Prepare this client's `.env`
 
