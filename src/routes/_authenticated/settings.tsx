@@ -362,7 +362,7 @@ function SettingsPage() {
             <IntegrationsTab
               autoClassify={draft.autoClassifyWhatsapp}
               onAutoClassify={(v) => set("autoClassifyWhatsapp", v)}
-              updatedBy={currentUser.name}
+              updatedBy={currentUser.id}
             />
           </TabsContent>
 
