@@ -17,7 +17,12 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0",
+        // RTL-aware: in dir="rtl" (the only direction this app renders in) the
+        // thumb's rest position is already at the track's right edge, so a
+        // physical translate-x-4 on "checked" pushed it further right and off
+        // the track — rtl: flips it to translate left instead, matching the
+        // visual "on" convention and staying inside the track.
+        "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0 rtl:data-[state=checked]:-translate-x-4 rtl:data-[state=unchecked]:translate-x-0",
       )}
     />
   </SwitchPrimitives.Root>
