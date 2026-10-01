@@ -1,13 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 export type AppSettings = {
-  companyName: string;
-  companyTagline: string;
-  companyPhone: string;
-  companyEmail: string;
-  companyAddress: string;
-  website: string;
-  taxId: string;
   currency: string;
   vatRate: number;
   depositPercent: number;
@@ -22,13 +15,6 @@ export type AppSettings = {
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  companyName: "طواف للسياحة",
-  companyTagline: "نظام إدارة العملاء",
-  companyPhone: "01012345678",
-  companyEmail: "info@tawaf-travel.com",
-  companyAddress: "القاهرة، مصر",
-  website: "https://tawaf-travel.com",
-  taxId: "100-200-300",
   currency: "EGP",
   vatRate: 14,
   depositPercent: 25,
@@ -47,7 +33,6 @@ const STORAGE_KEY = "tawaf-crm-settings";
 type SettingsCtx = {
   settings: AppSettings;
   update: (patch: Partial<AppSettings>) => void;
-  reset: () => void;
 };
 
 // singleton عبر globalThis حتى لا ينشئ HMR سياقاً مكرراً
@@ -79,14 +64,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           }
           return next;
         }),
-      reset: () => {
-        try {
-          localStorage.removeItem(STORAGE_KEY);
-        } catch {
-          /* تجاهل */
-        }
-        setSettings(DEFAULT_SETTINGS);
-      },
     }),
     [settings],
   );

@@ -18,12 +18,12 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
   head: () => ({
     meta: [
-      { title: "تسجيل الدخول — طواف للسياحة" },
+      { title: "تسجيل الدخول" },
       {
         name: "description",
-        content: "تسجيل الدخول إلى نظام إدارة عملاء ومبيعات شركة طواف للسياحة.",
+        content: "تسجيل الدخول إلى نظام إدارة العملاء والمبيعات.",
       },
-      { property: "og:title", content: "تسجيل الدخول — طواف للسياحة" },
+      { property: "og:title", content: "تسجيل الدخول" },
       {
         property: "og:description",
         content: "ادخل إلى لوحة إدارة الباقات والعملاء والحجوزات والتحصيل.",
@@ -135,7 +135,7 @@ function AuthPage() {
             </span>
           )}
           <h1 className="text-2xl font-extrabold text-foreground">
-            {branding?.companyName ?? "طواف للسياحة"}
+            {branding?.companyName ?? "نظام إدارة العملاء"}
           </h1>
           <p className="text-sm text-muted-foreground">نظام إدارة العملاء والحجوزات</p>
         </div>

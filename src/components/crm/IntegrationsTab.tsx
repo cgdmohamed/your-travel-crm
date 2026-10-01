@@ -416,7 +416,7 @@ export function IntegrationsTab({
             <Input
               value={smtpName}
               onChange={(e) => setSmtpName(e.target.value)}
-              placeholder="طواف للسياحة"
+              placeholder="اسم الشركة"
             />
           </Row>
           <div className="flex items-center justify-between rounded-md border bg-background p-3 md:col-span-2">

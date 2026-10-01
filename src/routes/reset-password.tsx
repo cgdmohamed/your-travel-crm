@@ -20,7 +20,7 @@ export const Route = createFileRoute("/reset-password")({
   component: ResetPasswordPage,
   head: () => ({
     meta: [
-      { title: "إعادة تعيين كلمة المرور — طواف للسياحة" },
+      { title: "إعادة تعيين كلمة المرور" },
       { name: "description", content: "إعادة تعيين كلمة مرور حساب الدخول." },
     ],
   }),
@@ -80,7 +80,7 @@ function ResetPasswordPage() {
             </span>
           )}
           <h1 className="text-2xl font-extrabold text-foreground">
-            {branding?.companyName ?? "طواف للسياحة"}
+            {branding?.companyName ?? "نظام إدارة العملاء"}
           </h1>
         </div>
 

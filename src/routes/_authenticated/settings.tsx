@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Building2, ImagePlus, Loader2, RotateCcw, Save } from "lucide-react";
+import { Building2, ImagePlus, Loader2, Save } from "lucide-react";
 import { AppLayout } from "@/components/crm/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -222,7 +222,7 @@ function BrandingCard({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function SettingsPage() {
-  const { settings, update, reset } = useSettings();
+  const { settings, update } = useSettings();
   const { employees, currentUser, can } = useCrm();
   const [draft, setDraft] = useState<AppSettings>(settings);
   useEffect(() => setDraft(settings), [settings]);
@@ -243,32 +243,10 @@ function SettingsPage() {
   return (
     <AppLayout title="الإعدادات" subtitle="إعدادات النظام بالكامل في مكان واحد">
       <div className="space-y-5" dir="rtl">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card p-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Building2 className="size-5" />
-            </span>
-            <div>
-              <p className="text-base font-bold text-foreground">{settings.companyName}</p>
-              <p className="text-xs text-muted-foreground">
-                تُحفظ الإعدادات على هذا الجهاز وتُطبَّق فوراً على كل الشاشات
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                reset();
-                toast.success("تمت الاستعادة للإعدادات الافتراضية");
-              }}
-            >
-              <RotateCcw className="size-4" /> استعادة الافتراضي
-            </Button>
-            <Button onClick={save}>
-              <Save className="size-4" /> حفظ التغييرات
-            </Button>
-          </div>
+        <div className="flex flex-wrap items-center justify-end gap-3 rounded-lg border bg-card p-4 shadow-sm">
+          <Button onClick={save}>
+            <Save className="size-4" /> حفظ التغييرات
+          </Button>
         </div>
 
         <Tabs defaultValue="company" dir="rtl">
@@ -282,50 +260,6 @@ function SettingsPage() {
 
           <TabsContent value="company" className="mt-4 space-y-4">
             <BrandingCard isAdmin={currentUser.role === "admin"} />
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">تفضيلات إضافية (تُحفظ على هذا الجهاز فقط)</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <Field label="اسم الشركة">
-                  <Input
-                    value={draft.companyName}
-                    onChange={(e) => set("companyName", e.target.value)}
-                  />
-                </Field>
-                <Field label="الوصف المختصر" hint="يظهر أسفل الاسم في القائمة الجانبية">
-                  <Input
-                    value={draft.companyTagline}
-                    onChange={(e) => set("companyTagline", e.target.value)}
-                  />
-                </Field>
-                <Field label="رقم الهاتف">
-                  <Input
-                    value={draft.companyPhone}
-                    onChange={(e) => set("companyPhone", e.target.value)}
-                    placeholder="01012345678"
-                  />
-                </Field>
-                <Field label="البريد الإلكتروني">
-                  <Input
-                    value={draft.companyEmail}
-                    onChange={(e) => set("companyEmail", e.target.value)}
-                  />
-                </Field>
-                <Field label="العنوان">
-                  <Input
-                    value={draft.companyAddress}
-                    onChange={(e) => set("companyAddress", e.target.value)}
-                  />
-                </Field>
-                <Field label="الموقع الإلكتروني">
-                  <Input value={draft.website} onChange={(e) => set("website", e.target.value)} />
-                </Field>
-                <Field label="الرقم الضريبي">
-                  <Input value={draft.taxId} onChange={(e) => set("taxId", e.target.value)} />
-                </Field>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="finance" className="mt-4">

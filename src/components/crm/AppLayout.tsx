@@ -18,7 +18,6 @@ import {
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { useCrm, ROLE_LABELS, type Permission } from "@/lib/crm-data";
-import { useSettings } from "@/lib/settings";
 import { useCompanyBranding } from "@/lib/branding";
 import { GlobalSearch } from "@/components/crm/GlobalSearch";
 import { QuickActions } from "@/components/crm/QuickActions";
@@ -48,9 +47,8 @@ export function AppLayout({
 }) {
   const { can, currentUser, refreshAuth } = useCrm();
   const navigate = useNavigate();
-  const { settings } = useSettings();
   const { data: branding } = useCompanyBranding();
-  const companyName = branding?.companyName ?? settings.companyName;
+  const companyName = branding?.companyName ?? "نظام إدارة العملاء";
   // يُحسب التاريخ بعد الترطيب حتى لا يختلف نص الخادم عن المتصفح (فرق التوقيت)
   const [today, setToday] = useState("");
   useEffect(() => {
@@ -81,7 +79,6 @@ export function AppLayout({
           )}
           <div className="min-w-0">
             <p className="truncate text-base font-bold leading-tight">{companyName}</p>
-            <p className="truncate text-xs text-sidebar-foreground/85">{settings.companyTagline}</p>
           </div>
         </div>
         <nav className="flex flex-1 flex-col gap-1 px-3 py-5">
