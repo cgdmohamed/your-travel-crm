@@ -18,7 +18,7 @@ import {
   type IntegrationsStatus,
 } from "@/lib/integrations.functions";
 
-type IntegrationKey = "meta" | "whatsapp" | "wordpress" | "smtp";
+type IntegrationKey = "meta" | "whatsapp" | "wordpress" | "smtp" | "openai";
 
 function Row({
   label,
@@ -86,6 +86,7 @@ export function IntegrationsTab({
   const [smtpFrom, setSmtpFrom] = useState("");
   const [smtpName, setSmtpName] = useState("");
   const [smtpSecure, setSmtpSecure] = useState(false);
+  const [openaiKey, setOpenaiKey] = useState("");
 
   const load = useCallback(async () => {
     const s = await statusFn({});
@@ -106,6 +107,7 @@ export function IntegrationsTab({
     setWaAppSecret("");
     setWpPass("");
     setSmtpPass("");
+    setOpenaiKey("");
   }, [statusFn]);
 
   useEffect(() => {
@@ -236,6 +238,53 @@ export function IntegrationsTab({
             <Button variant="ghost" asChild>
               <Link to="/whatsapp">فتح صندوق واتساب</Link>
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* OpenAI */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">OpenAI (تصنيف نية محادثات واتساب)</CardTitle>
+          <Status ok={Boolean(status?.openai.connected)} />
+        </CardHeader>
+        <CardContent className="grid gap-4 md:grid-cols-2">
+          <Row
+            label="مفتاح OpenAI API"
+            hint={
+              status?.openai.keyMask
+                ? `المحفوظ حالياً: ${status.openai.keyMask}`
+                : "من platform.openai.com ← API keys — يُستخدم لتفعيل «الفلترة الذكية للمحادثات» أعلاه"
+            }
+          >
+            <Input
+              type="password"
+              dir="ltr"
+              className="text-right"
+              value={openaiKey}
+              onChange={(e) => setOpenaiKey(e.target.value)}
+              placeholder="sk-..."
+            />
+          </Row>
+          <div className="flex flex-wrap items-end gap-2">
+            <Button
+              disabled={busy === "openai"}
+              onClick={() => void save("openai", { apiKey: openaiKey })}
+            >
+              <Save className="size-4" /> حفظ وربط
+            </Button>
+            <Button
+              variant="outline"
+              disabled={busy === "test-openai"}
+              onClick={() => void test("openai")}
+            >
+              <PlugZap className="size-4" /> اختبار المفتاح
+            </Button>
+            {status?.openai.connected ? (
+              <Button variant="outline" onClick={() => void disconnect("openai")}>
+                <Plug className="size-4" /> فصل الربط
+              </Button>
+            ) : null}
           </div>
         </CardContent>
       </Card>

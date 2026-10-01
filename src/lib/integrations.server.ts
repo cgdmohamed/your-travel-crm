@@ -1,5 +1,5 @@
 /** قراءة إعدادات التكاملات المحفوظة في قاعدة البيانات (خادم فقط) — PostgreSQL عادي */
-export type IntegrationKey = "meta" | "whatsapp" | "wordpress" | "smtp";
+export type IntegrationKey = "meta" | "whatsapp" | "wordpress" | "smtp" | "openai";
 
 export type SmtpConfig = {
   host?: string;
@@ -15,6 +15,7 @@ export type MetaConfig = { pixelId?: string; accessToken?: string; testEventCode
 /** واتساب بيزنس عبر Meta WhatsApp Cloud API الرسمية مباشرة (بدون أي وسيط) */
 export type WhatsAppConfig = { phoneNumberId?: string; accessToken?: string; appSecret?: string };
 export type WordpressConfig = { siteUrl?: string; username?: string; appPassword?: string };
+export type OpenAiConfig = { apiKey?: string };
 
 export async function readConfig<T extends Record<string, unknown>>(
   key: IntegrationKey,
@@ -82,5 +83,13 @@ export async function smtpCredentials() {
     fromEmail: pick(cfg.fromEmail, process.env["SMTP_FROM_EMAIL"]),
     fromName: pick(cfg.fromName, process.env["SMTP_FROM_NAME"]),
     secure: pick(cfg.secure, process.env["SMTP_SECURE"]),
+  };
+}
+
+/** مفتاح OpenAI (تصنيف نية رسائل واتساب): القيمة المحفوظة في القاعدة أولاً، ثم متغيّر البيئة */
+export async function openaiCredentials() {
+  const cfg = await readConfig<OpenAiConfig>("openai");
+  return {
+    apiKey: pick(cfg.apiKey, process.env["OPENAI_API_KEY"]),
   };
 }

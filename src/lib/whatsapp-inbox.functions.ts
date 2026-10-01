@@ -76,8 +76,9 @@ export const classifyThreads = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const { classifyThread } = await import("@/lib/whatsapp.server");
+    const { openaiCredentials } = await import("@/lib/integrations.server");
 
-    if (!process.env["OPENAI_API_KEY"]) {
+    if (!(await openaiCredentials()).apiKey) {
       return { ok: false as const, error: "التصنيف الذكي غير متاح حالياً.", classified: 0 };
     }
 

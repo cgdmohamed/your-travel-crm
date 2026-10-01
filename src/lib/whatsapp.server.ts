@@ -51,7 +51,8 @@ export type Intent = "interested" | "inquiry" | "unknown";
 export async function classifyThread(
   phone: string,
 ): Promise<{ intent: Intent; reason: string; confidence: number } | null> {
-  const key = process.env["OPENAI_API_KEY"];
+  const { openaiCredentials } = await import("@/lib/integrations.server");
+  const key = (await openaiCredentials()).apiKey;
   if (!key) return null;
 
   const { rows } = await query<{ direction: "in" | "out"; body: string | null }>(

@@ -18,20 +18,26 @@ export type IntegrationsStatus = {
     fromName: string;
     secure: boolean;
   };
+  openai: { connected: boolean; keyMask: string };
 };
 
 /** حالة كل التكاملات مع إخفاء المفاتيح */
 export const getIntegrationsStatus = createServerFn({ method: "GET" }).handler(
   async (): Promise<IntegrationsStatus> => {
-    const { readConfig, metaCredentials, whatsappCredentials, smtpCredentials } = await import(
-      "@/lib/integrations.server"
-    );
+    const {
+      readConfig,
+      metaCredentials,
+      whatsappCredentials,
+      smtpCredentials,
+      openaiCredentials,
+    } = await import("@/lib/integrations.server");
     const meta = await metaCredentials();
     const wa = await whatsappCredentials();
     const wp = await readConfig<{ siteUrl?: string; username?: string; appPassword?: string }>(
       "wordpress",
     );
     const smtp = await smtpCredentials();
+    const openai = await openaiCredentials();
     return {
       meta: {
         connected: Boolean(meta.pixelId && meta.token),
@@ -60,12 +66,16 @@ export const getIntegrationsStatus = createServerFn({ method: "GET" }).handler(
         fromName: smtp.fromName ?? "",
         secure: smtp.secure === "true",
       },
+      openai: {
+        connected: Boolean(openai.apiKey),
+        keyMask: mask(openai.apiKey),
+      },
     };
   },
 );
 
 const saveSchema = z.object({
-  key: z.enum(["meta", "whatsapp", "wordpress", "smtp"]),
+  key: z.enum(["meta", "whatsapp", "wordpress", "smtp", "openai"]),
   values: z.record(z.string(), z.string()),
   updatedBy: z.string().optional(),
 });
@@ -101,7 +111,7 @@ export const saveIntegration = createServerFn({ method: "POST" })
 export const disconnectIntegration = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((data: unknown) =>
-    z.object({ key: z.enum(["meta", "whatsapp", "wordpress", "smtp"]) }).parse(data),
+    z.object({ key: z.enum(["meta", "whatsapp", "wordpress", "smtp", "openai"]) }).parse(data),
   )
   .handler(async ({ data, context }) => {
     const { query } = await import("@/lib/db.server");
@@ -141,16 +151,34 @@ export const sendTestEmail = createServerFn({ method: "POST" })
 /** اختبار الاتصال الفعلي بكل تكامل */
 export const testIntegration = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
-    z.object({ key: z.enum(["meta", "whatsapp", "wordpress", "smtp"]) }).parse(data),
+    z.object({ key: z.enum(["meta", "whatsapp", "wordpress", "smtp", "openai"]) }).parse(data),
   )
   .handler(async ({ data }): Promise<{ ok: boolean; message: string }> => {
-    const { metaCredentials, whatsappCredentials, readConfig } = await import(
+    const { metaCredentials, whatsappCredentials, readConfig, openaiCredentials } = await import(
       "@/lib/integrations.server"
     );
 
     if (data.key === "smtp") {
       const { testSmtpConnection } = await import("@/lib/smtp.server");
       return testSmtpConnection();
+    }
+
+    if (data.key === "openai") {
+      const { apiKey } = await openaiCredentials();
+      if (!apiKey) return { ok: false, message: "أدخل مفتاح OpenAI API أولاً" };
+      try {
+        const res = await fetch("https://api.openai.com/v1/models", {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        if (res.ok) return { ok: true, message: "تم التحقق من مفتاح OpenAI بنجاح" };
+        const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+        return {
+          ok: false,
+          message: body.error?.message ?? `فشل التحقق من المفتاح (${res.status})`,
+        };
+      } catch (err) {
+        return { ok: false, message: err instanceof Error ? err.message : "تعذر الاتصال" };
+      }
     }
 
     if (data.key === "meta") {
