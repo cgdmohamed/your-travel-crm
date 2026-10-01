@@ -226,6 +226,7 @@ function SettingsPage() {
   const { employees, currentUser, can } = useCrm();
   const [draft, setDraft] = useState<AppSettings>(settings);
   useEffect(() => setDraft(settings), [settings]);
+  const [activeTab, setActiveTab] = useState("company");
 
   const set = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
@@ -243,13 +244,15 @@ function SettingsPage() {
   return (
     <AppLayout title="الإعدادات" subtitle="إعدادات النظام بالكامل في مكان واحد">
       <div className="space-y-5" dir="rtl">
-        <div className="flex flex-wrap items-center justify-end gap-3 rounded-lg border bg-card p-4 shadow-sm">
-          <Button onClick={save}>
-            <Save className="size-4" /> حفظ التغييرات
-          </Button>
-        </div>
+        {activeTab !== "company" ? (
+          <div className="flex flex-wrap items-center justify-end gap-3 rounded-lg border bg-card p-4 shadow-sm">
+            <Button onClick={save}>
+              <Save className="size-4" /> حفظ التغييرات
+            </Button>
+          </div>
+        ) : null}
 
-        <Tabs defaultValue="company" dir="rtl">
+        <Tabs defaultValue="company" onValueChange={setActiveTab} dir="rtl">
           <TabsList className="flex-wrap">
             <TabsTrigger value="company">بيانات الشركة</TabsTrigger>
             <TabsTrigger value="finance">المالية والعملة</TabsTrigger>
