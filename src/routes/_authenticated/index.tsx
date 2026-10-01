@@ -174,7 +174,7 @@ function Dashboard() {
 
   return (
     <AppLayout title="لوحة التحكم" subtitle="نظرة شاملة على أداء الشركة اليوم">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Kpi
           label="إجمالي المبيعات"
           value={money(revenue)}
@@ -279,8 +279,8 @@ function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Card className="min-w-0 lg:col-span-2">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="size-5 text-primary" />المبيعات خلال آخر 6 أشهر</CardTitle>
           </CardHeader>
@@ -307,7 +307,7 @@ function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base"><Trophy className="size-5 text-metric-violet" />أفضل الوجهات مبيعاً</CardTitle>
           </CardHeader>
@@ -340,7 +340,7 @@ function Dashboard() {
         </Card>
       </div>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+      <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base"><CalendarCheck className="size-5 text-primary" />آخر الحجوزات</CardTitle>
