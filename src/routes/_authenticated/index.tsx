@@ -167,7 +167,8 @@ function Dashboard() {
     "var(--chart-5)",
   ];
 
-  const todayFollowUps = [...scopedOpportunities]
+  const todayFollowUps = scopedOpportunities
+    .filter((o) => !!o.followUpDate)
     .sort((a, b) => a.followUpDate.localeCompare(b.followUpDate))
     .slice(0, 4);
 

@@ -99,7 +99,7 @@ function PipelinePage() {
         </div>
       )}
 
-      <div className="grid gap-3 lg:grid-cols-6">
+      <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-6">
         {PIPELINE_STAGES.map((stage) => {
           const items = scopedOpportunities.filter((o) => o.stage === stage);
           const value = items.reduce((s, o) => s + o.value, 0);
@@ -118,7 +118,11 @@ function PipelinePage() {
               <div className="flex flex-col gap-2">
                 {items.map((o) => {
                   const customer = customers.find((c) => c.id === o.customerId);
-                  const overdue = o.followUpDate < today() && o.stage !== "won" && o.stage !== "lost";
+                  const overdue =
+                    !!o.followUpDate &&
+                    o.followUpDate < today() &&
+                    o.stage !== "won" &&
+                    o.stage !== "lost";
                   const booking = o.bookingId ? bookings.find((b) => b.id === o.bookingId) : undefined;
                   return (
                     <Card
@@ -143,13 +147,15 @@ function PipelinePage() {
                           <Badge variant="outline" className="text-[10px]">
                             {SOURCE_LABELS[o.source]}
                           </Badge>
-                          <Badge
-                            variant={overdue ? "destructive" : "outline"}
-                            className="text-[10px]"
-                          >
-                            {overdue ? "متأخرة " : "متابعة "}
-                            {arDate(o.followUpDate)}
-                          </Badge>
+                          {o.followUpDate && (
+                            <Badge
+                              variant={overdue ? "destructive" : "outline"}
+                              className="text-[10px]"
+                            >
+                              {overdue ? "متأخرة " : "متابعة "}
+                              {arDate(o.followUpDate)}
+                            </Badge>
+                          )}
                         </div>
                         {booking && (
                           <Link

@@ -310,7 +310,16 @@ function WhatsAppInbox() {
                   return (
                     <button
                       key={t.phone}
-                      onClick={() => setSelected(t.phone)}
+                      onClick={() => {
+                        setSelected(t.phone);
+                        if (window.innerWidth < 1024) {
+                          window.setTimeout(() => {
+                            document
+                              .getElementById("whatsapp-conversation")
+                              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }, 50);
+                        }
+                      }}
                       className={`w-full rounded-lg border p-2.5 text-start transition ${
                         active ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
                       }`}
@@ -343,7 +352,7 @@ function WhatsAppInbox() {
           </Card>
 
           {/* المحادثة */}
-          <Card>
+          <Card id="whatsapp-conversation">
             <CardContent className="space-y-4 p-4">
               {!activeThread ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">
