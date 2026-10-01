@@ -1,5 +1,5 @@
 import { trackMeta } from "@/lib/meta-track";
-import { useAuth } from "@/lib/auth";
+import { useAuth, refreshAccessToken } from "@/lib/auth";
 import { useServerFn } from "@tanstack/react-start";
 import {
   useMutation,
@@ -11,6 +11,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   type Context,
   type ReactNode,
@@ -420,6 +421,16 @@ export function CrmProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const { profile, reload } = useAuth();
   const enabled = Boolean(profile);
+
+  // الـaccess token صالح 15 دقيقة فقط ومفيش أي تجديد تلقائي له غير هنا —
+  // من غيره أي إجراء بعد 15 دقيقة من آخر تسجيل دخول/تجديد كان بيفشل برسالة
+  // عامة غير مفهومة ("تعذر الحفظ"...) لأن التوكن بينتهي بصمت. تجديد كل 10
+  // دقائق (أقل من مدة الصلاحية بهامش أمان) طول ما فيه جلسة فعّالة.
+  useEffect(() => {
+    if (!enabled) return;
+    const id = setInterval(() => void refreshAccessToken(), 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [enabled]);
 
   // --- reads ---
   const employeesFn = useServerFn(listEmployees);

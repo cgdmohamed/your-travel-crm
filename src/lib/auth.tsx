@@ -56,3 +56,18 @@ export async function login(email: string, password: string) {
 export async function logout() {
   await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
 }
+
+/**
+ * يجدّد access token (صالح 15 دقيقة فقط) باستخدام refresh token المخزَّن في
+ * كوكي httpOnly منفصل. يُستدعى دوريًا من CrmProvider طالما الجلسة فعّالة —
+ * بدونه، أي إجراء بعد 15 دقيقة من آخر تجديد كان بيفشل برسالة عامة غير
+ * مفهومة ("تعذر الحفظ") لأن التوكن بينتهي بصمت بدون أي تجديد تلقائي.
+ */
+export async function refreshAccessToken(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "include" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
